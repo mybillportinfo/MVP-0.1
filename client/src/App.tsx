@@ -8,11 +8,13 @@ import Dashboard from "./pages/dashboard";
 import Payments from "./pages/payments";
 import Rewards from "./pages/rewards";
 import Profile from "./pages/profile";
+import FirebaseTest from "./pages/firebase-test";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/firebase-test" component={FirebaseTest} />
       <Route path="/payments" component={Payments} />
       <Route path="/rewards" component={Rewards} />
       <Route path="/profile" component={Profile} />
