@@ -111,28 +111,28 @@ export default function BillItem({ bill }: BillItemProps) {
   }
 
   return (
-    <div className={`bg-white rounded-xl shadow-sm border-l-4 ${classes.border} p-4`}>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className={`w-12 h-12 ${classes.iconBg} rounded-xl flex items-center justify-center`}>
+          <div className={`w-12 h-12 ${classes.iconBg} rounded-2xl flex items-center justify-center`}>
             <i className={`${bill.icon} ${classes.iconText} text-lg`}></i>
           </div>
-          <div>
+          <div className="flex-1">
             <h4 className="font-semibold text-gray-800">{bill.name}</h4>
-            <p className="text-sm text-gray-600">{bill.company}</p>
+            <p className="text-sm text-gray-500">{bill.company}</p>
             <p className={`text-xs ${classes.dueDateText} font-medium`}>
               {getDueDateText()}
             </p>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-lg font-bold text-gray-800">${bill.amount}</p>
+          <p className="text-lg font-bold text-gray-900">${bill.amount}</p>
           <button
             onClick={() => payBillMutation.mutate()}
             disabled={payBillMutation.isPending}
-            className={`${classes.buttonBg} text-white px-4 py-2 rounded-lg text-sm font-medium mt-2 transition-colors disabled:opacity-50`}
+            className="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg text-sm font-medium mt-1 transition-colors hover:bg-gray-200 disabled:opacity-50"
           >
-            {payBillMutation.isPending ? "Processing..." : "Pay Now"}
+            {payBillMutation.isPending ? "..." : "Pay"}
           </button>
         </div>
       </div>

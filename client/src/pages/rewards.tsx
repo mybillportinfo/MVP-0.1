@@ -46,9 +46,17 @@ export default function Rewards() {
   return (
     <>
       {/* Header */}
-      <header className="bg-blue-600 text-white p-4 shadow-lg">
+      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 shadow-lg">
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+            <svg viewBox="0 0 24 24" className="w-6 h-6 text-blue-600">
+              <path fill="currentColor" d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1ZM10 6a2 2 0 0 1 4 0v1h-4V6Zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10Z"/>
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold">MyBillPort</h1>
+        </div>
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Rewards</h1>
+          <h2 className="text-lg font-semibold">Rewards</h2>
           <div className="flex items-center space-x-2">
             <Gift className="w-5 h-5" />
             <span className="font-bold">{totalPoints} pts</span>
@@ -57,13 +65,13 @@ export default function Rewards() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 p-4 pb-20 overflow-y-auto">
+      <div className="flex-1 p-4 pb-20 overflow-y-auto bg-gray-50">
         {/* Points Summary */}
-        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl p-6 text-white mb-6">
+        <div className="bg-gradient-to-r from-green-400 to-green-500 rounded-2xl p-6 text-white mb-6 shadow-sm">
           <div className="text-center">
             <h2 className="text-3xl font-bold mb-2">{totalPoints}</h2>
-            <p className="text-yellow-100">Available Points</p>
-            <p className="text-sm text-yellow-100 mt-2">
+            <p className="text-green-100">Available Points</p>
+            <p className="text-sm text-green-100 mt-2">
               Earn points by paying bills on time!
             </p>
           </div>
@@ -81,20 +89,20 @@ export default function Rewards() {
         ) : (
           <div className="space-y-3">
             {rewards.map((reward) => (
-              <div key={reward.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+              <div key={reward.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      reward.isRedeemed === 1 ? 'bg-gray-100' : 'bg-yellow-100'
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                      reward.isRedeemed === 1 ? 'bg-gray-100' : 'bg-green-100'
                     }`}>
                       <Gift className={`w-6 h-6 ${
-                        reward.isRedeemed === 1 ? 'text-gray-400' : 'text-yellow-600'
+                        reward.isRedeemed === 1 ? 'text-gray-400' : 'text-green-600'
                       }`} />
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-800">{reward.title}</h4>
-                      <p className="text-sm text-gray-600">{reward.description}</p>
-                      <p className="text-sm font-medium text-yellow-600">{reward.points} points</p>
+                      <p className="text-sm text-gray-500">{reward.description}</p>
+                      <p className="text-sm font-medium text-green-600">{reward.points} points</p>
                     </div>
                   </div>
                   <div>
@@ -106,7 +114,7 @@ export default function Rewards() {
                       <button
                         onClick={() => redeemMutation.mutate(reward.id)}
                         disabled={redeemMutation.isPending}
-                        className="bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                        className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50"
                       >
                         {redeemMutation.isPending ? "Redeeming..." : "Redeem"}
                       </button>

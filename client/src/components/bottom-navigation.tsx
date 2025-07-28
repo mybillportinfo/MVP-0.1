@@ -16,8 +16,8 @@ export default function BottomNavigation({ activeTab }: BottomNavigationProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-white border-t border-gray-200 shadow-lg">
-      <div className="grid grid-cols-4 py-2">
+    <nav className="fixed bottom-0 left-1/2 transform -translate-x-1/2 max-w-md w-full bg-white border-t border-gray-100 shadow-lg">
+      <div className="grid grid-cols-4 py-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -29,11 +29,11 @@ export default function BottomNavigation({ activeTab }: BottomNavigationProps) {
               className={`flex flex-col items-center py-3 px-4 transition-colors ${
                 isActive 
                   ? "text-blue-600" 
-                  : "text-gray-400 hover:text-blue-600"
+                  : "text-gray-500 hover:text-blue-600"
               }`}
             >
-              <Icon className="w-6 h-6 mb-1" />
-              <span className={`text-xs ${isActive ? "font-medium" : ""}`}>
+              <Icon className="w-5 h-5 mb-1" />
+              <span className={`text-xs ${isActive ? "font-semibold" : "font-medium"}`}>
                 {tab.label}
               </span>
             </button>
