@@ -16,13 +16,19 @@ export default function EnhancedDashboard() {
 
   // Authentication check
   useEffect(() => {
+    console.log("Setting up auth listener...");
     const unsubscribe = auth.onAuthStateChanged((currentUser: any) => {
+      console.log("Auth state changed in enhanced dashboard:", currentUser);
       if (currentUser) {
+        console.log("User authenticated, setting user state");
         setUser(currentUser);
       } else {
+        console.log("No user, checking redirect...");
         // Only redirect if we're not already on login/signup pages
         const currentPath = window.location.pathname;
-        if (currentPath !== "/login" && currentPath !== "/signup") {
+        console.log("Current path:", currentPath);
+        if (currentPath !== "/login" && currentPath !== "/signup" && currentPath !== "/forgot-password") {
+          console.log("Redirecting to login...");
           window.location.href = "/login";
         }
       }
@@ -89,15 +95,19 @@ export default function EnhancedDashboard() {
   };
 
   if (!user) {
+    console.log("No user, showing loading screen");
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading...</p>
+          <p className="mt-2 text-gray-600">Loading dashboard...</p>
+          <p className="mt-1 text-xs text-gray-400">Checking authentication...</p>
         </div>
       </div>
     );
   }
+
+  console.log("User exists, rendering dashboard for:", user.email);
 
   const allBills = [...firebaseBills, ...postgresqlBills];
   const isLoading = isLoadingFirebase || isLoadingPostgres;
