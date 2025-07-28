@@ -24,7 +24,11 @@ export default function EnhancedDashboard() {
       if (currentUser) {
         setUser(currentUser);
       } else {
-        window.location.href = "/login";
+        // Only redirect if we're not already on login/signup pages
+        const currentPath = window.location.pathname;
+        if (currentPath !== "/login" && currentPath !== "/signup") {
+          window.location.href = "/login";
+        }
       }
     });
     return () => unsubscribe();
