@@ -16,11 +16,12 @@ import EnhancedDashboard from "./pages/enhanced-dashboard";
 import ForgotPassword from "./pages/forgot-password";
 import SimpleDashboard from "./pages/simple-dashboard";
 import TestDashboard from "./pages/test-dashboard";
+import StableDashboard from "./pages/stable-dashboard";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={TestDashboard} />
+      <Route path="/" component={StableDashboard} />
       <Route path="/test" component={TestDashboard} />
       <Route path="/signup" component={Signup} />
       <Route path="/login" component={Login} />
