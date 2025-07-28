@@ -8,7 +8,7 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       await loginUser(email, password);
-      alert("Login successful!");
+      window.location.href = "/dashboard";
     } catch (err) {
       alert(err.message);
     }
