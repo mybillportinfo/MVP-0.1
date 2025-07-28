@@ -14,11 +14,12 @@ import Login from "./pages/login";
 import AuthDashboard from "./pages/auth-dashboard";
 import EnhancedDashboard from "./pages/enhanced-dashboard";
 import ForgotPassword from "./pages/forgot-password";
+import SimpleDashboard from "./pages/simple-dashboard";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={EnhancedDashboard} />
+      <Route path="/" component={SimpleDashboard} />
       <Route path="/signup" component={Signup} />
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
