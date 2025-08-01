@@ -7,19 +7,19 @@ export default function Profile() {
   const handleMenuClick = (item: string) => {
     switch (item) {
       case "Personal Information":
-        alert("Personal Information - Feature coming soon!\n\nThis will allow you to:\n• Update your name and profile\n• Change contact details\n• Manage account preferences");
+        window.location.href = "/personal-info";
         break;
       case "Payment Methods":
-        alert("Payment Methods - Feature coming soon!\n\nThis will allow you to:\n• Add credit/debit cards\n• Manage bank accounts\n• Set default payment method");
+        window.location.href = "/payment-methods";
         break;
       case "Notifications":
-        alert("Notifications - Feature coming soon!\n\nThis will allow you to:\n• Set bill due date reminders\n• Configure payment confirmations\n• Manage email/SMS alerts");
+        window.location.href = "/notifications";
         break;
       case "Security":
-        alert("Security - Feature coming soon!\n\nThis will allow you to:\n• Change your password\n• Enable two-factor authentication\n• Review login activity");
+        window.location.href = "/security";
         break;
       case "App Settings":
-        alert("App Settings - Feature coming soon!\n\nThis will allow you to:\n• Choose app theme (light/dark)\n• Set currency preferences\n• Configure display options");
+        window.location.href = "/app-settings";
         break;
       case "Help & Support":
         window.location.href = "mailto:mybillportinfo@gmail.com?subject=MyBillPort Support Request&body=Hi MyBillPort Team,%0D%0A%0D%0AI need help with:%0D%0A%0D%0A[Please describe your issue here]%0D%0A%0D%0AThank you!";

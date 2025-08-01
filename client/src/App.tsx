@@ -17,6 +17,11 @@ import ForgotPassword from "./pages/forgot-password";
 import SimpleDashboard from "./pages/simple-dashboard";
 import TestDashboard from "./pages/test-dashboard";
 import StableDashboard from "./pages/stable-dashboard";
+import PersonalInfo from "./pages/personal-info";
+import PaymentMethods from "./pages/payment-methods";
+import Notifications from "./pages/notifications";
+import Security from "./pages/security";
+import AppSettings from "./pages/app-settings";
 
 function Router() {
   return (
@@ -32,6 +37,11 @@ function Router() {
       <Route path="/payments" component={Payments} />
       <Route path="/rewards" component={Rewards} />
       <Route path="/profile" component={Profile} />
+      <Route path="/personal-info" component={PersonalInfo} />
+      <Route path="/payment-methods" component={PaymentMethods} />
+      <Route path="/notifications" component={Notifications} />
+      <Route path="/security" component={Security} />
+      <Route path="/app-settings" component={AppSettings} />
       <Route component={NotFound} />
     </Switch>
   );
