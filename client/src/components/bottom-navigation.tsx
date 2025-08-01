@@ -21,6 +21,7 @@ export default function BottomNavigation() {
               <Link
                 key={item.path}
                 href={item.path}
+                onClick={() => console.log('Navigating to:', item.path)}
                 className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
                   isActive
                     ? "text-blue-600 bg-blue-50"

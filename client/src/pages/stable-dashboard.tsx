@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import BottomNavigation from "../components/bottom-navigation";
 import { Home, CreditCard, Gift, User, LogOut, Zap, Phone, Calendar, AlertCircle, CheckCircle, DollarSign, Plus, Bell } from "lucide-react";
 // @ts-ignore
@@ -363,36 +364,36 @@ export default function StableDashboard() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-3">
-              <button 
-                onClick={() => window.location.href = "/add-bill"}
+              <Link 
+                href="/add-bill"
                 className="flex items-center justify-center space-x-2 bg-blue-50 text-blue-700 py-3 px-4 rounded-xl font-medium hover:bg-blue-100 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Bill</span>
-              </button>
-              <button 
-                onClick={() => window.location.href = "/payments"}
+              </Link>
+              <Link 
+                href="/payments"
                 className="flex items-center justify-center space-x-2 bg-green-50 text-green-700 py-3 px-4 rounded-xl font-medium hover:bg-green-100 transition-colors"
               >
                 <DollarSign className="w-4 h-4" />
                 <span>Pay Bills</span>
-              </button>
-              <button 
-                onClick={() => window.location.href = "/credit-reminders"}
+              </Link>
+              <Link 
+                href="/credit-reminders"
                 className="flex items-center justify-center space-x-2 bg-red-50 text-red-700 py-3 px-4 rounded-xl font-medium hover:bg-red-100 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="font-bold">Credit Due</span>
-              </button>
-              <button 
-                onClick={() => window.location.href = "/profile"}
+              </Link>
+              <Link 
+                href="/profile"
                 className="flex items-center justify-center space-x-2 bg-gray-50 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-100 transition-colors"
               >
                 <User className="w-4 h-4" />
                 <span>Profile</span>
-              </button>
+              </Link>
             </div>
           </div>
         </div>
