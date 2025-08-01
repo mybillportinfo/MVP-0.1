@@ -126,7 +126,7 @@ export default function LiveChat() {
               <img src="/logo.png" alt="MyBillPort Logo" className="w-8 h-8 object-contain" />
               <div>
                 <h1 className="text-xl font-bold text-gray-800">Live Chat</h1>
-                <p className="text-sm text-gray-600">{currentAssistant.name} • AI Assistant</p>
+                <p className="text-sm text-gray-600">{currentAssistant.name} • Assistant</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
