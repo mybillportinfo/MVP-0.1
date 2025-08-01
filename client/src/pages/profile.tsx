@@ -18,7 +18,7 @@ export default function Profile() {
         <div className="flex items-center space-x-3 mb-4">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm p-1">
             <img 
-              src="/src/assets/logo.png" 
+              src="/logo.png" 
               alt="MyBillPort Logo" 
               className="w-8 h-8 object-contain"
             />

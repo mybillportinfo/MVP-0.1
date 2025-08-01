@@ -39,7 +39,7 @@ export default function Rewards() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <img 
-                src="/src/assets/logo.png" 
+                src="/logo.png" 
                 alt="MyBillPort Logo" 
                 className="w-8 h-8 object-contain"
               />

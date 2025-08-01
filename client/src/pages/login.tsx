@@ -49,7 +49,7 @@ export default function Login() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src="/src/assets/logo.png" 
+              src="/logo.png" 
               alt="MyBillPort Logo" 
               className="w-16 h-16 object-contain"
             />

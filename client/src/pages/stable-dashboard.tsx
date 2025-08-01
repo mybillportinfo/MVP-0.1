@@ -62,7 +62,7 @@ export default function StableDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <img 
-                src="/src/assets/logo.png" 
+                src="/logo.png" 
                 alt="MyBillPort Logo" 
                 className="w-10 h-10 object-contain"
               />
