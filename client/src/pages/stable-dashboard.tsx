@@ -60,9 +60,16 @@ export default function StableDashboard() {
       <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">MyBillPort</h1>
-              <p className="text-sm text-gray-600">Welcome back!</p>
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/src/assets/logo.png" 
+                alt="MyBillPort Logo" 
+                className="w-10 h-10 object-contain"
+              />
+              <div>
+                <h1 className="text-xl font-bold text-gray-800">MyBillPort</h1>
+                <p className="text-sm text-gray-600">Welcome back!</p>
+              </div>
             </div>
             <button
               onClick={handleLogout}

@@ -30,10 +30,12 @@ export default function Signup() {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg viewBox="0 0 24 24" className="w-8 h-8 text-blue-600">
-              <path fill="currentColor" d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1ZM10 6a2 2 0 0 1 4 0v1h-4V6Zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10Z"/>
-            </svg>
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/src/assets/logo.png" 
+              alt="MyBillPort Logo" 
+              className="w-16 h-16 object-contain"
+            />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Join MyBillPort</h1>
           <p className="text-gray-600 mt-2">Create your account to manage bills easily</p>

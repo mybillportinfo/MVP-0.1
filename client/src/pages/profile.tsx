@@ -16,10 +16,12 @@ export default function Profile() {
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 shadow-lg">
         <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-            <svg viewBox="0 0 24 24" className="w-6 h-6 text-blue-600">
-              <path fill="currentColor" d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1ZM10 6a2 2 0 0 1 4 0v1h-4V6Zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10Z"/>
-            </svg>
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm p-1">
+            <img 
+              src="/src/assets/logo.png" 
+              alt="MyBillPort Logo" 
+              className="w-8 h-8 object-contain"
+            />
           </div>
           <h1 className="text-xl font-bold">MyBillPort</h1>
         </div>

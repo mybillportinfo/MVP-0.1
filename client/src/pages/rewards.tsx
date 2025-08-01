@@ -38,6 +38,11 @@ export default function Rewards() {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
+              <img 
+                src="/src/assets/logo.png" 
+                alt="MyBillPort Logo" 
+                className="w-8 h-8 object-contain"
+              />
               <div>
                 <h1 className="text-xl font-bold text-gray-800">Rewards</h1>
                 <p className="text-sm text-gray-600">Earn points & save money</p>
