@@ -5,9 +5,11 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Enable CORS for all routes
+// Enable CORS for all routes including Replit URLs
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? false : ['http://localhost:3000', 'http://localhost:5173'],
+  origin: process.env.NODE_ENV === 'production' 
+    ? [/\.replit\.app$/, /\.repl\.co$/]
+    : ['http://localhost:3000', 'http://localhost:5173', /\.replit\.app$/, /\.repl\.co$/],
   credentials: true
 }));
 app.use(express.json());
