@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { ArrowLeft, Plus, CreditCard, Wallet, Gift, Building, Bitcoin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 
 export default function PaymentMethods() {
   const [paymentMethods, setPaymentMethods] = useState([
@@ -24,6 +30,66 @@ export default function PaymentMethods() {
   const [showAddMethod, setShowAddMethod] = useState(false);
   const [selectedType, setSelectedType] = useState('');
 
+  // Form validation schemas for different payment types
+  const cardSchema = z.object({
+    cardNumber: z.string().min(13, 'Card number must be at least 13 digits').max(19, 'Card number cannot exceed 19 digits'),
+    expiryDate: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/, 'Enter valid expiry date (MM/YY)'),
+    cvv: z.string().min(3, 'CVV must be 3-4 digits').max(4, 'CVV must be 3-4 digits'),
+    holderName: z.string().min(2, 'Cardholder name is required')
+  });
+
+  const giftCardSchema = z.object({
+    cardNumber: z.string().min(10, 'Gift card number is required'),
+    expiryDate: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/, 'Enter valid expiry date (MM/YY)'),
+    pin: z.string().min(4, 'PIN must be 4 digits').max(4, 'PIN must be 4 digits'),
+    holderName: z.string().min(2, 'Cardholder name is required')
+  });
+
+  const interacSchema = z.object({
+    email: z.string().email('Enter valid email address'),
+    securityQuestion: z.string().min(5, 'Security question is required')
+  });
+
+  // Create a unified schema that makes all fields optional and validates based on selected type
+  const unifiedSchema = z.object({
+    cardNumber: z.string().optional(),
+    expiryDate: z.string().optional(),
+    cvv: z.string().optional(),
+    pin: z.string().optional(),
+    holderName: z.string().optional(),
+    email: z.string().optional(),
+    securityQuestion: z.string().optional()
+  }).refine((data) => {
+    if (selectedType === 'interac') {
+      return data.email && data.email.includes('@') && data.securityQuestion && data.securityQuestion.length >= 5;
+    } else if (selectedType === 'gift') {
+      return data.cardNumber && data.cardNumber.length >= 10 && 
+             data.expiryDate && /^(0[1-9]|1[0-2])\/\d{2}$/.test(data.expiryDate) &&
+             data.pin && data.pin.length === 4 &&
+             data.holderName && data.holderName.length >= 2;
+    } else {
+      return data.cardNumber && data.cardNumber.length >= 13 && data.cardNumber.length <= 19 &&
+             data.expiryDate && /^(0[1-9]|1[0-2])\/\d{2}$/.test(data.expiryDate) &&
+             data.cvv && data.cvv.length >= 3 && data.cvv.length <= 4 &&
+             data.holderName && data.holderName.length >= 2;
+    }
+  }, {
+    message: "Please fill in all required fields correctly"
+  });
+
+  const form = useForm({
+    resolver: zodResolver(unifiedSchema),
+    defaultValues: {
+      cardNumber: '',
+      expiryDate: '',
+      cvv: '',
+      pin: '',
+      holderName: '',
+      email: '',
+      securityQuestion: ''
+    }
+  });
+
   const paymentTypes = [
     { id: 'debit', name: 'Debit Card', icon: CreditCard, color: 'bg-blue-50 text-blue-700 border-blue-200', available: true },
     { id: 'credit', name: 'Credit Card', icon: CreditCard, color: 'bg-green-50 text-green-700 border-green-200', available: true },
@@ -33,24 +99,40 @@ export default function PaymentMethods() {
   ];
 
   const handleAddPaymentMethod = (type: string) => {
-    console.log('Adding payment method:', type);
     if (type === 'crypto') {
       alert("Cryptocurrency payments coming soon!\n\nWe're working on integrating secure crypto payment options including Bitcoin, Ethereum, and other popular cryptocurrencies. This feature will be available in a future update.");
       return;
     }
 
     setSelectedType(type);
+    form.reset(); // Clear previous form data
     setShowAddMethod(true);
-    console.log('Modal should show now:', { selectedType: type, showAddMethod: true });
   };
 
-  const handleSavePaymentMethod = () => {
+  const handleSavePaymentMethod = (data: any) => {
     const typeInfo = paymentTypes.find(t => t.id === selectedType);
+    
+    // Extract last 4 digits from card number or use placeholder for other types
+    let last4 = '0000';
+    if (data.cardNumber) {
+      last4 = data.cardNumber.slice(-4);
+    } else if (data.email) {
+      last4 = data.email.slice(-4);
+    }
+
+    // Generate more descriptive names based on input
+    let methodName = `New ${typeInfo?.name}`;
+    if (data.holderName) {
+      methodName = `${data.holderName}'s ${typeInfo?.name}`;
+    } else if (data.email) {
+      methodName = `Interac (${data.email})`;
+    }
+
     const newMethod = {
       id: paymentMethods.length + 1,
       type: selectedType,
-      name: `New ${typeInfo?.name}`,
-      last4: '0000',
+      name: methodName,
+      last4,
       isDefault: false,
       icon: selectedType === 'debit' ? '💳' : selectedType === 'credit' ? '💎' : selectedType === 'gift' ? '🎁' : '🏦'
     };
@@ -58,6 +140,7 @@ export default function PaymentMethods() {
     setPaymentMethods([...paymentMethods, newMethod]);
     setShowAddMethod(false);
     setSelectedType('');
+    form.reset();
     
     alert(`${typeInfo?.name} added successfully!\n\nYour new payment method has been securely saved and is ready to use for bill payments.`);
   };
@@ -198,71 +281,146 @@ export default function PaymentMethods() {
                 Add {paymentTypes.find(t => t.id === selectedType)?.name}
               </h3>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {selectedType === 'gift' ? 'Gift Card Number' : 
-                     selectedType === 'interac' ? 'Email Address' : 'Card Number'}
-                  </label>
-                  <input
-                    type={selectedType === 'interac' ? 'email' : 'text'}
-                    placeholder={selectedType === 'gift' ? 'Enter gift card number' : 
-                               selectedType === 'interac' ? 'Enter email address' : 'Enter card number'}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-
-                {selectedType !== 'interac' && (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
-                        <input
-                          type="text"
-                          placeholder="MM/YY"
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSavePaymentMethod)} className="space-y-4">
+                  {selectedType === 'interac' ? (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email Address</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="email"
+                                placeholder="Enter email address"
+                                data-testid="input-email"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="securityQuestion"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Security Question</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="Enter security question"
+                                data-testid="input-security-question"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="cardNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              {selectedType === 'gift' ? 'Gift Card Number' : 'Card Number'}
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder={selectedType === 'gift' ? 'Enter gift card number' : 'Enter card number'}
+                                data-testid="input-card-number"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="expiryDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Expiry Date</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  placeholder="MM/YY"
+                                  data-testid="input-expiry-date"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={selectedType === 'gift' ? 'pin' : 'cvv'}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{selectedType === 'gift' ? 'PIN' : 'CVV'}</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  placeholder={selectedType === 'gift' ? '1234' : '123'}
+                                  data-testid={selectedType === 'gift' ? 'input-pin' : 'input-cvv'}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          {selectedType === 'gift' ? 'PIN' : 'CVV'}
-                        </label>
-                        <input
-                          type="text"
-                          placeholder={selectedType === 'gift' ? '1234' : '123'}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
+                      <FormField
+                        control={form.control}
+                        name="holderName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cardholder Name</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                placeholder="Enter name on card"
+                                data-testid="input-holder-name"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {selectedType === 'interac' ? 'Security Question' : 'Cardholder Name'}
-                  </label>
-                  <input
-                    type="text"
-                    placeholder={selectedType === 'interac' ? 'Enter security question' : 'Enter name on card'}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={() => setShowAddMethod(false)}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSavePaymentMethod}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Add Method
-                </button>
-              </div>
+                  <div className="flex space-x-3 mt-6">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddMethod(false);
+                        form.reset();
+                      }}
+                      className="flex-1"
+                      data-testid="button-cancel"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1"
+                      data-testid="button-add-method"
+                    >
+                      Add Method
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </div>
           </div>
         )}
