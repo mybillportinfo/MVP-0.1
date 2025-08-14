@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import BottomNavigation from "../components/bottom-navigation";
-import { Home, CreditCard, Gift, User, LogOut, Zap, Phone, Calendar, AlertCircle, CheckCircle, DollarSign, Plus, Bell } from "lucide-react";
+import { Home, CreditCard, Gift, User, LogOut, Zap, Phone, Calendar, AlertCircle, CheckCircle, DollarSign, Plus, Bell, Users } from "lucide-react";
 // @ts-ignore
 import { auth } from "../../../lib/firebaseConfig.js";
 // @ts-ignore
@@ -166,13 +166,24 @@ export default function StableDashboard() {
                 </div>
                 <h1 className="text-xl font-bold">MyBillPort</h1>
               </div>
-              <button
-                onClick={handleLogout}
-                className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                title="Logout"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => window.location.href = "/profile"}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  title="Profile"
+                  data-testid="button-profile-access"
+                >
+                  <User className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  title="Logout"
+                  data-testid="button-logout-dashboard"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Personal Information Display */}
@@ -388,11 +399,11 @@ export default function StableDashboard() {
                 <span className="font-bold">Credit Due</span>
               </Link>
               <Link 
-                href="/profile"
-                className="flex items-center justify-center space-x-2 bg-gray-50 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-100 transition-colors"
+                href="/bill-splitting"
+                className="flex items-center justify-center space-x-2 bg-purple-50 text-purple-700 py-3 px-4 rounded-xl font-medium hover:bg-purple-100 transition-colors"
               >
-                <User className="w-4 h-4" />
-                <span>Profile</span>
+                <Users className="w-4 h-4" />
+                <span className="font-bold">Split Bills</span>
               </Link>
             </div>
           </div>

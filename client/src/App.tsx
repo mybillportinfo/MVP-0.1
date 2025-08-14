@@ -30,6 +30,7 @@ import LiveChat from "./pages/live-chat";
 import AIReminders from "./pages/ai-reminders";
 import CreditReminders from "./pages/credit-reminders";
 import PlaidIntegration from "./pages/plaid-integration";
+import BillSplitting from "./pages/bill-splitting";
 
 function Router() {
   return (
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/ai-reminders" component={AIReminders} />
       <Route path="/credit-reminders" component={CreditReminders} />
       <Route path="/plaid" component={PlaidIntegration} />
+      <Route path="/bill-splitting" component={BillSplitting} />
       <Route component={NotFound} />
     </Switch>
   );
