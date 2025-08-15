@@ -213,3 +213,15 @@ The application follows modern web development best practices with a focus on ty
 - **Removed "(Optional)" designation from phone number field in profile**
 - **All profile and payment features fully integrated with Firebase authentication system**
 - **Mobile-optimized interface with proper form validation and user feedback**
+
+### Payment Methods and User Profile Fixes (August 15, 2025)
+- **Fixed user name persistence issue - Firebase now properly saves and loads actual user names instead of defaulting to "John"**
+- **Removed default TD Bank/RBC payment methods - payment methods list now starts completely empty**
+- **Implemented manual payment method entry for all card types (debit, credit, gift cards)**
+- **Fixed credit card functionality with proper TypeScript typing and form validation**
+- **Added empty state messaging with clear instructions when no payment methods exist**
+- **Enhanced Firebase user profile updates using updateProfile() for persistent name storage**
+- **Simplified payment request system to 3 fields: email, amount, message with default "This is for my billboard"**
+- **Fixed email authentication using Gmail service configuration for reliable payment request delivery**
+- **Added comprehensive TypeScript interfaces for payment method data structure**
+- **Improved user experience with proper loading states and error handling**
