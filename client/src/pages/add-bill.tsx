@@ -46,7 +46,7 @@ export default function AddBillFixed() {
       return addBill({ ...billData, userId: user.uid, paid: false });
     },
     onSuccess: (billId) => {
-      // Invalidate and refetch bills for this user
+      // Invalidate and refetch bills for this user immediately
       queryClient.invalidateQueries({ queryKey: ["firebase-bills", user?.uid] });
       setShowSuccess(true);
       
@@ -58,7 +58,7 @@ export default function AddBillFixed() {
       // Auto-close modal after 2.5 seconds
       setTimeout(() => {
         setShowSuccess(false);
-        window.history.back();
+        window.location.href = "/";
       }, 2500);
     },
     onError: (error: any) => {

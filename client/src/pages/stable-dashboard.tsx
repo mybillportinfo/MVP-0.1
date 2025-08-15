@@ -20,7 +20,9 @@ export default function StableDashboard() {
       if (!user?.uid) return [];
       return getBills(user.uid);
     },
-    enabled: !!user?.uid
+    enabled: !!user?.uid,
+    refetchOnWindowFocus: true,
+    staleTime: 0 // Always consider data stale to ensure fresh data
   });
 
   // Helper function to get icon for bill
