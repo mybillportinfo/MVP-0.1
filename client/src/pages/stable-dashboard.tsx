@@ -193,7 +193,7 @@ export default function StableDashboard() {
                   <User className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold">Welcome back, John!</h2>
+                  <h2 className="text-lg font-semibold">Welcome back, {user.displayName || 'User'}!</h2>
                   <p className="text-white/80 text-sm">{user.email}</p>
                   <div className="flex items-center space-x-2 mt-1">
                     <div className="w-2 h-2 bg-green-400 rounded-full"></div>

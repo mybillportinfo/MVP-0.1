@@ -40,7 +40,7 @@ export default function Profile() {
     const unsubscribe = auth.onAuthStateChanged((user: any) => {
       if (user) {
         setUser(user);
-        form.setValue('displayName', user.displayName || 'John Doe');
+        form.setValue('displayName', user.displayName || user.email?.split('@')[0] || 'User');
         form.setValue('email', user.email || '');
         form.setValue('phoneNumber', user.phoneNumber || '');
         setProfileImage(user.photoURL || '');
@@ -53,11 +53,17 @@ export default function Profile() {
 
   const handleSaveProfile = async (data: any) => {
     try {
-      // In a real app, you would update the Firebase user profile here
-      // await updateProfile(auth.currentUser, {
-      //   displayName: data.displayName,
-      //   photoURL: profileImage
-      // });
+      // Update Firebase user profile
+      if (auth.currentUser) {
+        const { updateProfile } = await import('firebase/auth');
+        await updateProfile(auth.currentUser, {
+          displayName: data.displayName,
+          photoURL: profileImage
+        });
+        
+        // Update local user state
+        setUser({ ...auth.currentUser, displayName: data.displayName });
+      }
 
       // Send notification email and text about profile update
       try {

@@ -7,25 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 
+interface PaymentMethod {
+  id: number;
+  type: string;
+  name: string;
+  last4: string;
+  isDefault: boolean;
+  icon: string;
+}
+
 export default function PaymentMethods() {
-  const [paymentMethods, setPaymentMethods] = useState([
-    {
-      id: 1,
-      type: 'debit',
-      name: 'TD Canada Trust Debit',
-      last4: '4532',
-      isDefault: true,
-      icon: '💳'
-    },
-    {
-      id: 2,
-      type: 'credit',
-      name: 'RBC Visa Credit Card',
-      last4: '8901',
-      isDefault: false,
-      icon: '💎'
-    }
-  ]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
   const [showAddMethod, setShowAddMethod] = useState(false);
   const [selectedType, setSelectedType] = useState('');
@@ -224,40 +216,49 @@ export default function PaymentMethods() {
           <div>
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Your Payment Methods</h2>
             <div className="space-y-3">
-              {paymentMethods.map(method => (
-                <div key={method.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-2xl">{method.icon}</span>
-                      <div>
-                        <p className="font-medium text-gray-800">{method.name}</p>
-                        <p className="text-sm text-gray-600">•••• {method.last4}</p>
-                        {method.isDefault && (
-                          <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mt-1">
-                            Default
-                          </span>
+              {paymentMethods.length === 0 ? (
+                <div className="bg-gray-50 p-6 rounded-lg text-center">
+                  <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">No Payment Methods Added</h3>
+                  <p className="text-sm text-gray-600 mb-4">Add your first payment method to start managing your bills easily.</p>
+                  <p className="text-xs text-gray-500">You can add debit cards, credit cards, gift cards, or use Interac e-Transfer.</p>
+                </div>
+              ) : (
+                paymentMethods.map(method => (
+                  <div key={method.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{method.icon}</span>
+                        <div>
+                          <p className="font-medium text-gray-800">{method.name}</p>
+                          <p className="text-sm text-gray-600">•••• {method.last4}</p>
+                          {method.isDefault && (
+                            <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mt-1">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {!method.isDefault && (
+                          <button
+                            onClick={() => handleSetDefault(method.id)}
+                            className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1 border border-blue-600 rounded"
+                          >
+                            Set Default
+                          </button>
                         )}
+                        <button
+                          onClick={() => handleRemoveMethod(method.id)}
+                          className="text-xs text-red-600 hover:text-red-700 px-2 py-1 border border-red-600 rounded"
+                        >
+                          Remove
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {!method.isDefault && (
-                        <button
-                          onClick={() => handleSetDefault(method.id)}
-                          className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1 border border-blue-600 rounded"
-                        >
-                          Set Default
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleRemoveMethod(method.id)}
-                        className="text-xs text-red-600 hover:text-red-700 px-2 py-1 border border-red-600 rounded"
-                      >
-                        Remove
-                      </button>
-                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
