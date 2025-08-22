@@ -1,8 +1,8 @@
 import { useBills, useBillsFiltered } from "@/hooks/useBills";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard, Phone, Zap, Home, Calendar, AlertCircle, CheckCircle } from "lucide-react";
+import PayButton from "./PayButton";
 
 interface BillsListProps {
   filter?: 'all' | 'overdue' | 'due-soon' | 'unpaid' | 'paid';
@@ -49,10 +49,7 @@ export default function BillsList({ filter = 'all', showPayButton = true }: Bill
     }
   };
 
-  const handlePayBill = (billId: string, billName: string, amount: string) => {
-    // Redirect to checkout page
-    window.location.href = `/checkout?billId=${billId}`;
-  };
+  // Remove handlePayBill - now using PayButton component
 
   if (isLoading) {
     return (
@@ -133,14 +130,8 @@ export default function BillsList({ filter = 'all', showPayButton = true }: Bill
                   </div>
                 </div>
                 
-                {showPayButton && bill.isPaid === 0 && (
-                  <Button
-                    onClick={() => handlePayBill(bill.id, bill.name, bill.amount)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
-                    data-testid={`button-pay-${bill.id}`}
-                  >
-                    Pay Bill
-                  </Button>
+                {showPayButton && (
+                  <PayButton bill={bill} size="sm" />
                 )}
               </div>
             </CardContent>
