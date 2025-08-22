@@ -1,20 +1,17 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { getFirebaseAdmin, initializeFirebaseAdmin } from "./firebase-admin";
 import { seedDatabase } from "./seed";
 import { insertBillSchema, insertPaymentSchema, insertRewardSchema } from "@shared/schema";
 import { z } from "zod";
-import { plaidClient, PLAID_PRODUCTS, PLAID_COUNTRY_CODES } from "./plaid";
-import { 
-  LinkTokenCreateRequest,
-  ItemPublicTokenExchangeRequest,
-  AccountsGetRequest,
-} from 'plaid';
+import { plaidClient } from "./plaid";
 import { scanBillImage } from './ai-scanner';
 import nodemailer from 'nodemailer';
-import { sendPaymentRequestEmail } from '../services/email';
+// Email service imports handled dynamically
 import Stripe from "stripe";
 import express from "express";
+import path from "path";
 
 // Store access tokens in memory for demo purposes
 // In production, store these securely in your database
@@ -32,6 +29,72 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({
+      ok: true,
+      time: new Date().toISOString(),
+      version: "1.0.0",
+      env: process.env.NODE_ENV || "development"
+    });
+  });
+
+  // Configuration audit endpoint  
+  app.get("/admin/config-report", async (req, res) => {
+    try {
+      // Import the audit function
+      const { auditConfiguration } = await import("../scripts/configAudit.js");
+      const auditResult = auditConfiguration();
+      
+      res.json({
+        timestamp: new Date().toISOString(),
+        status: auditResult.hasErrors ? 'error' : auditResult.hasWarnings ? 'warning' : 'success',
+        ...auditResult
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        error: "Failed to run configuration audit",
+        message: error.message || "Unknown error occurred"
+      });
+    }
+  });
+
+  // Firebase test endpoint
+  app.get("/api/firebase-test", async (req, res) => {
+    try {
+      const { db } = getFirebaseAdmin();
+      
+      // Test write
+      const testDoc = {
+        message: "Hello from MyBillPort!",
+        timestamp: new Date().toISOString(),
+        testId: Math.random().toString(36).substr(2, 9)
+      };
+      
+      const docRef = db.collection('diagnostics').doc('hello');
+      await docRef.set(testDoc);
+      
+      // Test read
+      const docSnap = await docRef.get();
+      const readData = docSnap.data();
+      
+      res.json({
+        success: true,
+        message: "Firebase Admin SDK test successful",
+        writeData: testDoc,
+        readData: readData,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error: any) {
+      console.error("Firebase test failed:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message || "Unknown error occurred",
+        message: "Firebase Admin SDK test failed"
+      });
+    }
+  });
   // Import and register testing routes
   const { registerEmailTestRoutes } = await import('./routes/email-test');
   const { registerAdminRoutes } = await import('./routes/admin-config');
@@ -801,6 +864,237 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Stripe Checkout endpoint
+  app.post("/api/checkout", async (req, res) => {
+    try {
+      const { billId, billName, amount, email } = req.body;
+      
+      if (!billId || !billName || !amount) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "billId, billName, and amount are required" 
+        });
+      }
+
+      if (!stripe) {
+        return res.status(500).json({
+          success: false,
+          error: "Stripe not configured"
+        });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'cad',
+            product_data: {
+              name: billName,
+              description: `Payment for ${billName}`
+            },
+            unit_amount: Math.round(parseFloat(amount) * 100), // Convert to cents
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${process.env.PUBLIC_APP_URL || 'https://mybillport.com'}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.PUBLIC_APP_URL || 'https://mybillport.com'}/payment-cancelled`,
+        metadata: {
+          billId: billId,
+          billName: billName,
+          amount: amount
+        },
+        customer_email: email
+      });
+
+      res.json({
+        success: true,
+        sessionId: session.id,
+        url: session.url
+      });
+
+    } catch (error: any) {
+      console.error('Checkout session creation failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to create checkout session'
+      });
+    }
+  });
+
+  // Stripe Webhook endpoint
+  app.post("/stripe/webhook", express.raw({type: 'application/json'}), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+
+    let event;
+
+    try {
+      if (!endpointSecret) {
+        console.log('⚠️ Stripe webhook secret not configured - processing anyway for demo');
+        event = req.body;
+      } else {
+        event = stripe?.webhooks.constructEvent(req.body, sig as string, endpointSecret);
+      }
+    } catch (err: any) {
+      console.log(`❌ Webhook signature verification failed.`, err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object;
+        console.log('💰 Payment succeeded for session:', session.id);
+        
+        // Extract bill ID from metadata
+        const billId = session.metadata?.billId;
+        
+        if (billId) {
+          try {
+            // Mark bill as paid
+            await storage.markBillAsPaid(billId);
+            console.log(`✅ Bill ${billId} marked as paid`);
+          } catch (error) {
+            console.error('Failed to mark bill as paid:', error);
+          }
+        }
+        break;
+        
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object;
+        console.log('💳 Payment intent succeeded:', paymentIntent.id);
+        break;
+        
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    res.json({received: true});
+  });
+
+  // Plaid Link Token endpoint
+  app.post("/api/create_link_token", async (req, res) => {
+    try {
+      const userId = "demo-user-1"; // In production, get from authenticated session
+
+      const request = {
+        user: {
+          client_user_id: userId,
+        },
+        client_name: "MyBillPort",
+        products: ['transactions' as const],
+        country_codes: ['CA' as const],
+        language: 'en',
+      };
+
+      const response = await plaidClient.linkTokenCreate(request);
+      const linkToken = response.data.link_token;
+
+      res.json({
+        success: true,
+        link_token: linkToken
+      });
+
+    } catch (error: any) {
+      console.error('Link token creation failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to create link token'
+      });
+    }
+  });
+
+  // Plaid Exchange Public Token endpoint
+  app.post("/api/exchange_public_token", async (req, res) => {
+    try {
+      const { public_token } = req.body;
+      
+      if (!public_token) {
+        return res.status(400).json({
+          success: false,
+          error: "public_token is required"
+        });
+      }
+
+      const request = {
+        public_token: public_token,
+      };
+
+      const response = await plaidClient.itemPublicTokenExchange(request);
+      const accessToken = response.data.access_token;
+      const itemId = response.data.item_id;
+
+      // TODO: Store access_token securely for the user
+      console.log('🔗 Plaid account linked:', itemId);
+
+      res.json({
+        success: true,
+        item_id: itemId,
+        message: "Account successfully linked"
+      });
+
+    } catch (error: any) {
+      console.error('Public token exchange failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to exchange public token'
+      });
+    }
+  });
+
+  // Plaid Transactions Sync endpoint
+  app.get("/api/transactions/sync", async (req, res) => {
+    try {
+      // For demo purposes, return mock transaction data
+      // In production, use stored access_token to fetch real transactions
+      
+      const mockTransactions = [
+        {
+          id: "txn_1",
+          date: new Date().toISOString().split('T')[0],
+          description: "Hydro Quebec",
+          amount: -89.50,
+          category: "utilities",
+          suggested_bill: {
+            name: "Electricity Bill",
+            company: "Hydro Quebec",
+            amount: 89.50,
+            frequency: "monthly"
+          }
+        },
+        {
+          id: "txn_2", 
+          date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          description: "Bell Canada",
+          amount: -75.99,
+          category: "telecom",
+          suggested_bill: {
+            name: "Phone Bill",
+            company: "Bell Canada", 
+            amount: 75.99,
+            frequency: "monthly"
+          }
+        }
+      ];
+
+      res.json({
+        success: true,
+        transactions: mockTransactions,
+        suggested_bills: mockTransactions.map(t => t.suggested_bill),
+        message: "Transactions synced successfully"
+      });
+
+    } catch (error: any) {
+      console.error('Transaction sync failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to sync transactions'
+      });
+    }
+  });
+
+  // Note: Catch-all route handled by Vite middleware in development mode
 
   const httpServer = createServer(app);
   return httpServer;

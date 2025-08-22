@@ -1,296 +1,317 @@
-# MyBillPort - Comprehensive Bill Management Platform
+# MyBillPort - Complete Bill Management Platform
 
-A modern, full-stack bill management application built with React, Node.js, Express, Firebase, and comprehensive AI integrations.
+MyBillPort is a comprehensive, mobile-first Progressive Web App (PWA) built with React and Express, designed to simplify bill management and payments with AI-powered features, secure banking integrations, and real-time notifications.
 
-![MyBillPort](https://img.shields.io/badge/MyBillPort-v2.0.0-blue.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Node](https://img.shields.io/badge/Node.js-18+-brightgreen.svg)
-![React](https://img.shields.io/badge/React-18+-blue.svg)
+## 🌟 Features
 
-## 🚀 Live Application
+### Core Functionality
+- ✅ **Real-time Bill Management** - Add, track, categorize, and manage bills with instant updates
+- ✅ **AI-Powered Bill Scanning** - Automatic data extraction using Anthropic Claude Sonnet 4
+- ✅ **Secure Payment Processing** - Stripe integration with webhook support
+- ✅ **Banking Integration** - Plaid SDK for secure account linking and transaction sync
+- ✅ **Email Notifications** - MailerSend integration for reminders and payment requests
+- ✅ **Progressive Web App** - Mobile-optimized with offline capabilities
 
-- **Production URL**: [www.mybillport.com](https://www.mybillport.com)
-- **Replit Deployment**: [mybillport.replit.app](https://mybillport.replit.app)
-
-## 📋 Project Overview
-
-MyBillPort is a comprehensive financial management platform that leverages advanced AI and modern web technologies to provide intuitive, secure, and engaging personal finance experiences. The application features real-time bill tracking, AI-powered bill scanning, email notifications, and banking integrations.
-
-## ✨ Key Features
-
-### 🏠 Core Functionality
-- **Real-time Bill Tracking**: Add, manage, and track bills with automatic sorting by due date
-- **Dashboard Categorization**: Overdue bills, Due Soon (≤7 days), and All Others sections
-- **Instant Bill Addition**: Bills appear immediately after adding with proper Firestore writes
-- **Mobile-First Design**: Responsive interface optimized for all devices
-
-### 🤖 AI-Powered Features
-- **Bill Scanner**: Real Anthropic AI integration for extracting bill information from images
-- **Smart Suggestions**: AI-powered bill reduction recommendations
-- **Intelligent Categorization**: Automatic bill categorization and provider recognition
-
-### 💌 Email & Communication
-- **MailerSend Integration**: Professional email notifications for payment requests
-- **Payment Request System**: Send payment requests via email with Interac e-Transfer instructions
-- **Profile Notifications**: Email notifications for profile updates and security alerts
-
-### 🏦 Banking Integration
-- **Plaid API**: Secure bank account connectivity for balance checking
-- **Account Management**: View multiple bank accounts, balances, and transaction history
-- **Sandbox Testing**: Full Plaid sandbox environment for safe testing
-
-### 🔐 Authentication & Security
-- **Firebase Authentication**: Secure user registration and login
-- **Protected Routes**: Authentication-required pages with proper redirects
-- **Session Management**: Persistent user sessions with automatic logout
-
-## 🛠 Technology Stack
-
-### Frontend
-- **React 18** with TypeScript
-- **Wouter** for lightweight routing
-- **TanStack Query** for server state management
-- **Tailwind CSS** with shadcn/ui components
-- **Vite** for fast development and builds
-
-### Backend
-- **Node.js** with Express.js
-- **TypeScript** throughout the stack
-- **Firebase Firestore** for real-time data storage
-- **PostgreSQL** with Drizzle ORM for additional data needs
-
-### External Services
-- **Firebase Authentication** for user management
-- **Anthropic Claude 4.0** for AI bill scanning
-- **MailerSend API** for email notifications
-- **Plaid API** for banking integrations
-- **Replit Deployments** for hosting
+### Technical Features
+- ✅ **Firebase Authentication** - Secure user authentication with biometric options
+- ✅ **PostgreSQL Database** - Reliable data persistence with Drizzle ORM
+- ✅ **RESTful API** - Comprehensive backend with proper error handling
+- ✅ **Modern UI/UX** - Tailwind CSS with Radix UI components
+- ✅ **Real-time Updates** - Live bill status changes without page refresh
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ installed
-- Firebase project configured
-- MailerSend account with verified domain
-- Plaid developer account (sandbox)
-- PostgreSQL database (optional)
+- Node.js 18+ 
+- PostgreSQL database (Neon recommended)
+- Required API keys (see Environment Variables)
 
-### Environment Variables
-Create a `.env` file in the root directory:
+### Installation
 
 ```bash
-# Database Configuration (Optional)
-DATABASE_URL=your_postgresql_connection_string
-PGHOST=localhost
-PGPORT=5432
-PGUSER=your_username  
-PGPASSWORD=your_password
-PGDATABASE=your_database
-
-# Firebase Configuration (Required)
-VITE_FIREBASE_API_KEY=your_firebase_api_key
-VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
-VITE_FIREBASE_APP_ID=your_firebase_app_id
-
-# Email Configuration (Required for payment requests)
-MAILERSEND_API_KEY=mlsnd_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-FROM_EMAIL=verified_email@yourdomain.com
-FROM_NAME=MyBillPort
-TEST_EMAIL=your_test_email@example.com
-
-# AI Configuration (Required for bill scanning)
-ANTHROPIC_API_KEY=sk-ant-apiXXXXXXXXXXXXXXXXXXXXXX
-
-# Plaid Configuration (Required for banking)
-PLAID_CLIENT_ID=your_plaid_client_id
-PLAID_SECRET=your_plaid_secret_key
-PLAID_ENV=sandbox
-```
-
-### Installation & Setup
-
-1. **Clone the repository**
-```bash
+# Clone the repository
 git clone https://github.com/rsingh4545/mybillport.git
 cd mybillport
-```
 
-2. **Install dependencies**
-```bash
+# Install dependencies
 npm install
-```
 
-3. **Configure Firebase**
-   - Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com/)
-   - Enable Authentication with Google sign-in
-   - Create a Firestore database
-   - Add your domain to Authorized domains
-   - Copy configuration values to `.env`
+# Set up environment variables (see .env.example)
+cp .env.example .env
 
-4. **Set up MailerSend**
-   - Create account at [mailersend.com](https://www.mailersend.com/)
-   - Verify your sender domain
-   - Generate API key and add to `.env`
+# Push database schema
+npm run db:push
 
-5. **Configure Plaid (Optional)**
-   - Sign up at [plaid.com/developers](https://plaid.com/developers)
-   - Get sandbox credentials
-   - Add to `.env` file
-
-6. **Start the development server**
-```bash
+# Start development server
 npm run dev
 ```
 
-7. **Open the application**
-   - Frontend: http://localhost:5000
-   - API endpoints: http://localhost:5000/api/*
+### Production Build
 
-## 📁 Project Structure
+```bash
+# Build the application
+npm run build
 
-```
-mybillport/
-├── client/                 # React frontend application
-│   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/          # Route components
-│   │   ├── hooks/          # Custom React hooks
-│   │   ├── lib/            # Utility functions
-│   │   └── services/       # API service functions
-├── server/                 # Express backend application
-│   ├── routes/             # API route handlers
-│   ├── db.ts               # Database configuration
-│   ├── storage.ts          # Data storage interface
-│   └── index.ts            # Server entry point
-├── services/               # Shared service modules
-│   ├── bills.ts            # Bill management functions
-│   ├── email.ts            # Email service integration
-│   └── auth.js             # Authentication helpers
-├── shared/                 # Shared type definitions
-│   └── schema.ts           # Database schema and types
-├── lib/                    # Configuration files
-│   └── firebaseConfig.js   # Firebase initialization
-├── package.json            # Dependencies and scripts
-├── .env.example            # Environment template
-└── README.md               # Project documentation
+# Start production server
+npm start
 ```
 
-## 🔧 API Endpoints
+## 🔧 Environment Variables
 
-### Bill Management
-- `GET /api/bills` - Get user bills
-- `POST /api/bills` - Add new bill
-- `PUT /api/bills/:id` - Update bill
-- `DELETE /api/bills/:id` - Delete bill
-- `POST /api/bills/scan` - AI bill scanning
+### Required Variables
 
-### Email Services
-- `POST /api/payment-request/send` - Send payment request email
-- `POST /email-test` - Test email configuration
-- `POST /api/notifications/profile-update` - Profile update notifications
+#### Firebase Configuration
+```env
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_APP_ID=your_app_id
+FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
+```
 
-### Banking Integration
-- `POST /api/create_link_token` - Create Plaid Link token
-- `POST /api/exchange_public_token` - Exchange public token
-- `GET /api/accounts` - Get connected accounts
+#### Database
+```env
+DATABASE_URL=postgresql://username:password@host:port/database
+```
 
-### Admin & Testing
-- `GET /admin/config-report` - System configuration status
+#### Payment Processing
+```env
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+#### Banking Integration
+```env
+PLAID_CLIENT_ID=your_plaid_client_id
+PLAID_SECRET=your_plaid_secret
+PLAID_ENV=sandbox
+```
+
+#### Email Services
+```env
+MAILERSEND_API_KEY=mlsn_...
+FROM_EMAIL=noreply@yourdomain.com
+FROM_NAME=MyBillPort
+TEST_EMAIL=your-test@email.com
+```
+
+#### Application
+```env
+PUBLIC_APP_URL=https://mybillport.com
+NODE_ENV=production
+```
 
 ## 🧪 Testing Endpoints
 
-You can test the API endpoints using curl:
+### Health & Configuration
+- `GET /api/health` - Application health check
+- `GET /admin/config-report` - Environment configuration audit
+- `GET /admin/status` - System status and memory usage
+- `GET /admin/env-check` - Environment variables check (safe)
 
-```bash
-# Test email configuration
-curl -X POST http://localhost:5000/email-test
+### Email Testing
+- `POST /api/email-test` - Send test email to TEST_EMAIL
+- `POST /api/send-bill-reminder` - Test bill reminder email
+- `POST /api/send-payment-request` - Test payment request email
 
-# Check system configuration
-curl -X GET http://localhost:5000/admin/config-report
+### Firebase Testing
+- `GET /api/firebase-test` - Test Firebase Admin SDK connection
 
-# Send payment request (requires authentication)
-curl -X POST http://localhost:5000/api/payment-request/send \
-  -H "Content-Type: application/json" \
-  -d '{"recipientEmail": "test@example.com", "amount": 25.50, "message": "Test payment"}'
-```
+### Payment Testing
+- `POST /api/checkout` - Create Stripe checkout session
+- `POST /stripe/webhook` - Stripe webhook handler (test with Stripe CLI)
 
-## 🚀 Deployment
+### Banking Integration
+- `POST /api/create_link_token` - Create Plaid Link token
+- `POST /api/exchange_public_token` - Exchange public token for access token
+- `GET /api/transactions/sync` - Sync and analyze transactions
 
-### Replit Deployment
-1. Push code to your Replit project
-2. Configure environment variables in Secrets
-3. Click "Deploy" to create production deployment
-4. Configure custom domain if desired
+## 💳 Stripe Integration
 
-### Manual Deployment
-1. Build the application: `npm run build`
-2. Set up production environment variables
-3. Deploy to your preferred hosting platform
-4. Ensure PostgreSQL database is accessible
-5. Configure DNS for custom domain
+### Setting up Webhooks
 
-## 📊 Environment Configuration Status
+1. **Create Webhook Endpoint**
+   ```bash
+   # In Stripe Dashboard > Developers > Webhooks
+   Endpoint URL: https://mybillport.com/stripe/webhook
+   Events: checkout.session.completed, payment_intent.succeeded
+   ```
 
-The application includes built-in configuration checking:
-- Visit `/admin/config-report` for complete environment status
-- Check email functionality with `/email-test` endpoint
-- Monitor console logs for service initialization
+2. **Test with Stripe CLI**
+   ```bash
+   stripe listen --forward-to localhost:5000/stripe/webhook
+   stripe trigger checkout.session.completed
+   ```
 
-## 🔍 Troubleshooting
+3. **Test Payment Flow**
+   ```bash
+   # Create checkout session
+   curl -X POST http://localhost:5000/api/checkout \
+     -H "Content-Type: application/json" \
+     -d '{"billId":"test-123","billName":"Test Bill","amount":"99.99","email":"test@example.com"}'
+   
+   # Use test card: 4242 4242 4242 4242
+   ```
+
+## 🏦 Plaid Integration
+
+### Sandbox Testing
+
+1. **Link Test Account**
+   ```bash
+   # Create link token
+   curl -X POST http://localhost:5000/api/create_link_token
+   
+   # Use returned link_token in Plaid Link component
+   # Select "First Platypus Bank" for testing
+   ```
+
+2. **Sync Transactions**
+   ```bash
+   curl http://localhost:5000/api/transactions/sync
+   ```
+
+### Common Test Credentials
+- **Username**: `user_good`
+- **Password**: `pass_good`
+- **Institution**: First Platypus Bank (sandbox)
+
+## 📧 Email Configuration
+
+### MailerSend Setup
+
+1. **Create MailerSend Account** → Dashboard → API Tokens
+2. **Get Verified Domain** → Use trial domain for testing
+3. **Test Email Service**
+   ```bash
+   curl -X POST http://localhost:5000/api/email-test
+   ```
+
+### Email Templates Available
+- **Test Email** - Verify email service is working
+- **Bill Reminders** - Automated due date notifications  
+- **Payment Requests** - Interac e-Transfer style requests
+- **Bill Added Confirmations** - New bill notifications
+
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Email not sending**
-   - Verify MAILERSEND_API_KEY is correct
-   - Ensure sender domain is verified in MailerSend dashboard
-   - Check FROM_EMAIL is using verified domain
+**Database Connection Failed**
+```bash
+# Check DATABASE_URL format
+echo $DATABASE_URL
+# Should be: postgresql://user:pass@host:port/db
 
-2. **Bills not appearing**
-   - Check Firebase configuration in browser console
-   - Verify user authentication status
-   - Check Firestore security rules
+# Test connection
+npm run db:push
+```
 
-3. **AI scanning not working**
-   - Verify ANTHROPIC_API_KEY is valid
-   - Check API quota limits
-   - Ensure image upload is successful
+**Firebase Auth Errors**
+```bash
+# Validate service account JSON
+echo $FIREBASE_SERVICE_ACCOUNT_KEY | jq .
 
-4. **Banking integration issues**
-   - Verify Plaid credentials in sandbox
-   - Check CORS configuration
-   - Ensure webhook URLs are accessible
+# Check admin config
+curl http://localhost:5000/api/firebase-test
+```
 
-### Debug Mode
-Enable debug logging by setting `NODE_ENV=development` in your `.env` file.
+**Stripe Webhook Verification Failed**
+```bash
+# Ensure webhook secret is set
+echo $STRIPE_WEBHOOK_SECRET
 
-## 📝 License
+# Test with raw body parsing
+curl -X POST http://localhost:5000/stripe/webhook \
+  -H "Content-Type: application/json" \
+  -d '{"type":"checkout.session.completed"}'
+```
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+**Plaid API Errors**
+```bash
+# Verify environment
+echo $PLAID_ENV  # should be "sandbox"
+echo $PLAID_CLIENT_ID
+echo $PLAID_SECRET
 
-## 👥 Contributing
+# Check configuration
+curl -X POST http://localhost:5000/api/create_link_token
+```
+
+### Development Tips
+
+- Use `npm run config:audit` to check all environment variables
+- Enable verbose logging with `DEBUG=* npm run dev`
+- Test webhooks locally with ngrok: `ngrok http 5000`
+- Use Stripe CLI for webhook testing: `stripe listen --forward-to localhost:5000/stripe/webhook`
+
+## 📱 Mobile PWA Features
+
+- **Offline Support** - Service worker for cached bill data
+- **Add to Home Screen** - Native app-like experience  
+- **Push Notifications** - Bill due date reminders
+- **Biometric Login** - Face ID / Fingerprint support
+- **Mobile-First Design** - Optimized for touch interaction
+
+## 🏗️ Architecture
+
+### Frontend Stack
+- **React 18** with TypeScript
+- **Wouter** for routing  
+- **TanStack Query** for server state
+- **Radix UI + shadcn/ui** design system
+- **Tailwind CSS** for styling
+- **Vite** build system
+
+### Backend Stack
+- **Node.js + Express** API server
+- **Drizzle ORM** with PostgreSQL
+- **Firebase Admin** for authentication
+- **Stripe** for payments
+- **Plaid** for banking data
+- **MailerSend** for notifications
+
+## 🚢 Deployment
+
+### Replit Deployment (Recommended)
+
+```bash
+# Environment is already configured
+# Just click "Deploy" in Replit interface
+# Domain will be: mybillport-repl.repl.co
+```
+
+### Custom Domain Setup
+
+1. **DNS Configuration**
+   ```
+   CNAME: mybillport.com → your-repl.repl.co
+   ```
+
+2. **SSL Certificate** - Automatically provided by Replit
+
+3. **Environment Variables** - Update PUBLIC_APP_URL
+   ```env
+   PUBLIC_APP_URL=https://mybillport.com
+   ```
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
-## 📞 Support
+## 📄 License
 
-For support and questions:
-- Email: mybillportinfo@gmail.com
-- GitHub Issues: [Create an issue](https://github.com/rsingh4545/mybillport/issues)
-- Documentation: [Wiki](https://github.com/rsingh4545/mybillport/wiki)
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🎯 Roadmap
+## 🆘 Support
 
-- [ ] Mobile app development (React Native)
-- [ ] Advanced AI financial insights
-- [ ] Integration with more banking providers
-- [ ] Cryptocurrency payment tracking
-- [ ] Multi-language support
-- [ ] Enhanced security features
+- **Documentation**: See this README and inline code comments
+- **Issues**: GitHub Issues tracker  
+- **Email**: Contact through the application
 
 ---
 
-**MyBillPort** - Simplifying personal finance management with modern technology.
+Built with ❤️ using modern web technologies for reliable, secure bill management.

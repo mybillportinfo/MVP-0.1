@@ -1,13 +1,12 @@
-import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
+import { PlaidApi, Configuration, PlaidEnvironments } from 'plaid';
 
-if (!process.env.PLAID_CLIENT_ID || !process.env.PLAID_SECRET) {
-  throw new Error(
-    "PLAID_CLIENT_ID and PLAID_SECRET must be set. Check your .env file.",
-  );
-}
-
+// Plaid configuration
 const configuration = new Configuration({
-  basePath: PlaidEnvironments[process.env.PLAID_ENV as keyof typeof PlaidEnvironments] || PlaidEnvironments.sandbox,
+  basePath: process.env.PLAID_ENV === 'sandbox' 
+    ? PlaidEnvironments.sandbox 
+    : process.env.PLAID_ENV === 'production' 
+    ? PlaidEnvironments.production 
+    : PlaidEnvironments.development,
   baseOptions: {
     headers: {
       'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
@@ -18,5 +17,6 @@ const configuration = new Configuration({
 
 export const plaidClient = new PlaidApi(configuration);
 
-export const PLAID_PRODUCTS = ['transactions', 'auth', 'identity', 'assets'];
-export const PLAID_COUNTRY_CODES = ['US', 'CA'];
+console.log('Plaid client configured for environment:', process.env.PLAID_ENV || 'development');
+console.log('Plaid client ID configured:', !!process.env.PLAID_CLIENT_ID);
+console.log('Plaid secret configured:', !!process.env.PLAID_SECRET);

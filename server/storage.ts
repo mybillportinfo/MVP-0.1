@@ -13,6 +13,7 @@ export interface IStorage {
   getBill(id: string): Promise<Bill | undefined>;
   createBill(bill: InsertBill): Promise<Bill>;
   updateBill(id: string, updates: Partial<Bill>): Promise<Bill | undefined>;
+  markBillAsPaid(billId: string): Promise<Bill | undefined>;
   
   // Payment operations
   getPaymentsByUserId(userId: string): Promise<Payment[]>;
@@ -70,6 +71,15 @@ export class DatabaseStorage implements IStorage {
       .update(bills)
       .set(updates)
       .where(eq(bills.id, id))
+      .returning();
+    return bill || undefined;
+  }
+
+  async markBillAsPaid(billId: string): Promise<Bill | undefined> {
+    const [bill] = await db
+      .update(bills)
+      .set({ isPaid: 1 })
+      .where(eq(bills.id, billId))
       .returning();
     return bill || undefined;
   }
