@@ -7,6 +7,7 @@ import { insertBillSchema, insertPaymentSchema, insertRewardSchema } from "@shar
 import { z } from "zod";
 import { plaidClient } from "./plaid";
 import { scanBillImage } from './ai-scanner';
+import { sendPaymentRequestEmail } from '../services/email';
 import nodemailer from 'nodemailer';
 import Stripe from "stripe";
 import express from "express";
@@ -15,7 +16,8 @@ import {
   LinkTokenCreateRequest,
   ItemPublicTokenExchangeRequest,
   AccountsGetRequest,
-  CountryCode
+  CountryCode,
+  Products
 } from 'plaid';
 
 // Store access tokens in memory for demo purposes
@@ -132,19 +134,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerEmailTestRoutes(app);
   registerAdminRoutes(app);
 
-  // Seed database and get demo user ID
-  let DEMO_USER_ID: string;
-  try {
-    DEMO_USER_ID = await seedDatabase();
-    if (!DEMO_USER_ID) {
-      // If seeding was skipped, get existing demo user
-      const demoUser = await storage.getUserByUsername("johndoe");
-      DEMO_USER_ID = demoUser?.id || "demo-user-1";
+  // Use fallback demo user ID initially - seeding moved to /api/seed endpoint
+  let DEMO_USER_ID: string = "demo-user-1";
+  
+  // Optional seeding endpoint
+  app.post("/api/seed", async (req, res) => {
+    try {
+      const userId = await seedDatabase();
+      if (userId) {
+        DEMO_USER_ID = userId;
+        res.json({ success: true, message: "Database seeded successfully", userId });
+      } else {
+        res.json({ success: true, message: "Database already seeded" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
     }
-  } catch (error) {
-    console.warn("Database seeding failed, using fallback demo user ID:", error);
-    DEMO_USER_ID = "demo-user-1";
-  }
+  });
 
   // Get user bills
   app.get("/api/bills", async (req, res) => {
@@ -389,8 +395,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           client_user_id: DEMO_USER_ID.toString(),
         },
         client_name: "MyBillPort",
-        products: ['transactions'],
-        country_codes: ['CA'] as CountryCode[],
+        products: [Products.Transactions],
+        country_codes: [CountryCode.Ca],
         language: 'en',
       };
 
