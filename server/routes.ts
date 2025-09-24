@@ -133,11 +133,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAdminRoutes(app);
 
   // Seed database and get demo user ID
-  let DEMO_USER_ID = await seedDatabase();
-  if (!DEMO_USER_ID) {
-    // If seeding was skipped, get existing demo user
-    const demoUser = await storage.getUserByUsername("johndoe");
-    DEMO_USER_ID = demoUser?.id || "demo-user-1";
+  let DEMO_USER_ID: string;
+  try {
+    DEMO_USER_ID = await seedDatabase();
+    if (!DEMO_USER_ID) {
+      // If seeding was skipped, get existing demo user
+      const demoUser = await storage.getUserByUsername("johndoe");
+      DEMO_USER_ID = demoUser?.id || "demo-user-1";
+    }
+  } catch (error) {
+    console.warn("Database seeding failed, using fallback demo user ID:", error);
+    DEMO_USER_ID = "demo-user-1";
   }
 
   // Get user bills
