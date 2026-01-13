@@ -187,10 +187,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new bill
   app.post("/api/bills", async (req, res) => {
     try {
-      const billData = insertBillSchema.parse({
+      // Convert date string to Date object if needed
+      const requestData = {
         ...req.body,
-        userId: DEMO_USER_ID
-      });
+        userId: DEMO_USER_ID,
+        dueDate: req.body.dueDate ? new Date(req.body.dueDate) : undefined
+      };
+      
+      const billData = insertBillSchema.parse(requestData);
       const bill = await storage.createBill(billData);
       res.json(bill);
     } catch (error) {

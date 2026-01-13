@@ -1,49 +1,51 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Check, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import ProviderGrid, { type Provider } from "@/components/ProviderGrid";
-// @ts-ignore
-import { auth } from "../../../lib/firebaseConfig.js";
-import { addBill } from "../../../services/bills";
+import { apiRequest } from "@/lib/queryClient";
 
 interface BillData {
   name: string;
+  company: string;
   accountNumber: string;
   amount: string;
   dueDate: string;
-  frequency: string;
-  leadDays: number;
+  priority: string;
+  icon: string;
 }
 
 type Step = 1 | 2 | 3;
 
 export default function AddBillStepper() {
-  const [user, setUser] = useState<any>(null);
   const [step, setStep] = useState<Step>(1);
   const [showSuccess, setShowSuccess] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [customProviderName, setCustomProviderName] = useState("");
   const queryClient = useQueryClient();
 
   const [billData, setBillData] = useState<BillData>({
     name: "",
+    company: "",
     accountNumber: "",
     amount: "",
     dueDate: "",
-    frequency: "monthly",
-    leadDays: 3
+    priority: "medium",
+    icon: "📄"
   });
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  const isOtherProvider = selectedProvider?.id === 'other';
 
   const addBillMutation = useMutation({
-    mutationFn: async (billData: any) => {
-      if (!user) throw new Error("User not authenticated");
-      return addBill({ ...billData, userId: user.uid, paid: false });
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/bills", data);
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["firebase-bills", user?.uid] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bills"] });
       setShowSuccess(true);
       
       toast({
@@ -65,23 +67,35 @@ export default function AddBillStepper() {
     },
   });
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser: any) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        window.location.href = "/login";
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
   const handleProviderSelect = (provider: Provider) => {
     setSelectedProvider(provider);
-    setBillData(prev => ({ ...prev, name: provider.name }));
+    if (provider.id !== 'other') {
+      const providerName = provider.name;
+      setBillData(prev => ({ 
+        ...prev, 
+        name: providerName,
+        company: providerName
+      }));
+      setCustomProviderName("");
+    } else {
+      setBillData(prev => ({ 
+        ...prev, 
+        name: customProviderName,
+        company: customProviderName
+      }));
+    }
+  };
+  
+  const handleCustomProviderChange = (name: string) => {
+    setCustomProviderName(name);
+    setBillData(prev => ({ 
+      ...prev, 
+      name: name,
+      company: name
+    }));
   };
 
-  const handleInputChange = (field: keyof BillData, value: string | number) => {
+  const handleInputChange = (field: keyof BillData, value: string) => {
     setBillData(prev => ({ ...prev, [field]: value }));
     if (validationErrors[field]) {
       setValidationErrors(prev => ({ ...prev, [field]: '' }));
@@ -91,9 +105,6 @@ export default function AddBillStepper() {
   const validateStep2 = (): boolean => {
     const errors: Record<string, string> = {};
     
-    if (!billData.accountNumber.trim()) {
-      errors.accountNumber = "Account number is required";
-    }
     if (!billData.amount || parseFloat(billData.amount) <= 0) {
       errors.amount = "Amount must be greater than 0";
     }
@@ -110,6 +121,10 @@ export default function AddBillStepper() {
       toast({ title: "Please select a provider", variant: "destructive" });
       return;
     }
+    if (step === 1 && isOtherProvider && !customProviderName.trim()) {
+      toast({ title: "Please enter a provider name", variant: "destructive" });
+      return;
+    }
     if (step === 2 && !validateStep2()) {
       return;
     }
@@ -121,20 +136,27 @@ export default function AddBillStepper() {
   };
 
   const handleSave = async () => {
-    if (!user) {
-      toast({ title: "Please log in to add bills", variant: "destructive" });
-      return;
-    }
-
     await addBillMutation.mutateAsync({
       name: billData.name,
-      accountNumber: billData.accountNumber,
+      company: billData.company || billData.name,
       amount: billData.amount,
       dueDate: billData.dueDate,
-      leadDays: billData.leadDays,
-      frequency: billData.frequency,
-      userId: user.uid
+      priority: billData.priority,
+      icon: getProviderIcon(billData.name)
     });
+  };
+
+  const getProviderIcon = (name: string): string => {
+    const n = name.toLowerCase();
+    if (n.includes('hydro') || n.includes('electric')) return '⚡';
+    if (n.includes('gas') || n.includes('enbridge')) return '🔥';
+    if (n.includes('water')) return '💧';
+    if (n.includes('phone') || n.includes('rogers') || n.includes('bell') || n.includes('telus')) return '📱';
+    if (n.includes('internet') || n.includes('wifi')) return '📶';
+    if (n.includes('credit') || n.includes('bank')) return '💳';
+    if (n.includes('netflix') || n.includes('disney') || n.includes('crave')) return '📺';
+    if (n.includes('insurance')) return '🛡️';
+    return '📄';
   };
 
   if (showSuccess) {
@@ -161,6 +183,8 @@ export default function AddBillStepper() {
     2: "Bill Details",
     3: "Confirm & Save"
   };
+
+  const displayName = isOtherProvider ? customProviderName : selectedProvider?.name;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-emerald-100">
@@ -197,11 +221,28 @@ export default function AddBillStepper() {
       <div className="max-w-md mx-auto p-4 pb-32">
         {/* Step 1: Provider Selection */}
         {step === 1 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
             <ProviderGrid 
               onSelect={handleProviderSelect} 
               selectedId={selectedProvider?.id}
             />
+            
+            {/* Custom Provider Name Input */}
+            {isOtherProvider && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter Provider Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., My Custom Provider"
+                  value={customProviderName}
+                  onChange={(e) => handleCustomProviderChange(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  autoFocus
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -214,14 +255,14 @@ export default function AddBillStepper() {
                   <Check className="w-6 h-6 text-teal-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{selectedProvider?.name}</h3>
+                  <h3 className="font-semibold text-gray-900">{displayName}</h3>
                   <p className="text-sm text-gray-500">{selectedProvider?.category}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Account Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Account Number (Optional)</label>
                   <input
                     type="text"
                     placeholder="Enter account number"
@@ -229,13 +270,10 @@ export default function AddBillStepper() {
                     onChange={(e) => handleInputChange('accountNumber', e.target.value)}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                   />
-                  {validationErrors.accountNumber && (
-                    <p className="text-red-600 text-sm mt-1">{validationErrors.accountNumber}</p>
-                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount (CAD)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount (CAD) *</label>
                   <input
                     type="number"
                     placeholder="0.00"
@@ -250,7 +288,7 @@ export default function AddBillStepper() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Due Date *</label>
                   <input
                     type="date"
                     value={billData.dueDate}
@@ -263,30 +301,15 @@ export default function AddBillStepper() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Frequency</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
                   <select
-                    value={billData.frequency}
-                    onChange={(e) => handleInputChange('frequency', e.target.value)}
+                    value={billData.priority}
+                    onChange={(e) => handleInputChange('priority', e.target.value)}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                   >
-                    <option value="monthly">Monthly</option>
-                    <option value="biweekly">Bi-weekly</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Remind me</label>
-                  <select
-                    value={billData.leadDays}
-                    onChange={(e) => handleInputChange('leadDays', parseInt(e.target.value))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                  >
-                    <option value={1}>1 day before</option>
-                    <option value={3}>3 days before</option>
-                    <option value={7}>7 days before</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="urgent">Urgent</option>
                   </select>
                 </div>
               </div>
@@ -303,12 +326,14 @@ export default function AddBillStepper() {
               <div className="space-y-4">
                 <div className="flex justify-between py-3 border-b border-gray-100">
                   <span className="text-gray-600">Provider</span>
-                  <span className="font-semibold text-gray-900">{billData.name}</span>
+                  <span className="font-semibold text-gray-900">{displayName}</span>
                 </div>
-                <div className="flex justify-between py-3 border-b border-gray-100">
-                  <span className="text-gray-600">Account</span>
-                  <span className="font-semibold text-gray-900">{billData.accountNumber}</span>
-                </div>
+                {billData.accountNumber && (
+                  <div className="flex justify-between py-3 border-b border-gray-100">
+                    <span className="text-gray-600">Account</span>
+                    <span className="font-semibold text-gray-900">{billData.accountNumber}</span>
+                  </div>
+                )}
                 <div className="flex justify-between py-3 border-b border-gray-100">
                   <span className="text-gray-600">Amount</span>
                   <span className="font-semibold text-teal-600 text-xl">${parseFloat(billData.amount).toFixed(2)}</span>
@@ -321,13 +346,9 @@ export default function AddBillStepper() {
                     })}
                   </span>
                 </div>
-                <div className="flex justify-between py-3 border-b border-gray-100">
-                  <span className="text-gray-600">Frequency</span>
-                  <span className="font-semibold text-gray-900 capitalize">{billData.frequency}</span>
-                </div>
                 <div className="flex justify-between py-3">
-                  <span className="text-gray-600">Reminder</span>
-                  <span className="font-semibold text-gray-900">{billData.leadDays} days before</span>
+                  <span className="text-gray-600">Priority</span>
+                  <span className="font-semibold text-gray-900 capitalize">{billData.priority}</span>
                 </div>
               </div>
             </div>
