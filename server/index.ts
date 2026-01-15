@@ -76,5 +76,28 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Schedule daily reminder check (runs every 24 hours)
+    const REMINDER_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+    setInterval(async () => {
+      try {
+        const { processReminders } = await import('./reminder-service');
+        const results = await processReminders();
+        log(`📧 Daily reminders processed: ${results.length} sent`);
+      } catch (error) {
+        console.error('Failed to process daily reminders:', error);
+      }
+    }, REMINDER_INTERVAL);
+    
+    // Run initial check after 1 minute to allow startup
+    setTimeout(async () => {
+      try {
+        const { processReminders } = await import('./reminder-service');
+        const results = await processReminders();
+        log(`📧 Initial reminder check: ${results.length} sent`);
+      } catch (error) {
+        console.error('Initial reminder check failed:', error);
+      }
+    }, 60000);
   });
 })();

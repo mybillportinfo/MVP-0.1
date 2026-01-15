@@ -45,42 +45,19 @@ import BillsDashboard from "./pages/bills-dashboard";
 import CheckoutPage from "./pages/checkout";
 import Privacy from "./pages/privacy";
 import Terms from "./pages/terms";
+import MVPDashboard from "./pages/mvp-dashboard";
+import AddBillSimple from "./pages/add-bill-simple";
 
 function Router() {
   return (
     <Switch>
+      {/* MVP Core Routes */}
       <Route path="/" component={LandingPage} />
-      <Route path="/app" component={NoAuthDashboard} />
-      <Route path="/test" component={TestDashboard} />
-      <Route path="/signup" component={Signup} />
+      <Route path="/app" component={MVPDashboard} />
+      <Route path="/add-bill-simple" component={AddBillSimple} />
       <Route path="/login" component={SimpleLogin} />
-      <Route path="/forgot-password" component={ForgotPassword} />
-      <Route path="/dashboard" component={AuthDashboard} />
-      <Route path="/enhanced-dashboard" component={EnhancedDashboard} />
-      <Route path="/firebase-test" component={FirebaseTest} />
-      <Route path="/payments" component={PaymentPage} />
-      <Route path="/rewards" component={Rewards} />
+      <Route path="/signup" component={Signup} />
       <Route path="/profile" component={Profile} />
-      <Route path="/personal-info" component={PersonalInfo} />
-      <Route path="/payment-methods" component={PaymentMethods} />
-      <Route path="/notifications" component={Notifications} />
-      <Route path="/security" component={Security} />
-      <Route path="/app-settings" component={AppSettings} />
-      <Route path="/add-bill" component={AddBill} />
-      <Route path="/bill-details/:id" component={BillDetails} />
-      <Route path="/camera-scan" component={CameraScan} />
-      <Route path="/ai-suggestions" component={AISuggestions} />
-      <Route path="/live-chat" component={LiveChat} />
-      <Route path="/ai-reminders" component={AIReminders} />
-      <Route path="/credit-reminders" component={CreditReminders} />
-      <Route path="/plaid" component={PlaidIntegration} />
-      <Route path="/auto-detect" component={AutoDetectBills} />
-      <Route path="/email-bills" component={EmailBills} />
-      <Route path="/bill-splitting" component={BillSplitting} />
-      <Route path="/request-money" component={RequestMoney} />
-      <Route path="/bills-dashboard" component={BillsDashboard} />
-      <Route path="/bills" component={BillsDashboard} />
-      <Route path="/checkout" component={CheckoutPage} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
       <Route component={NotFound} />

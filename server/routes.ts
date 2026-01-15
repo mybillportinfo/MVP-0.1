@@ -973,6 +973,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== BILL REMINDERS ENDPOINTS ==========
+  
+  app.post("/api/reminders/process", async (req, res) => {
+    try {
+      const { processReminders } = await import('./reminder-service');
+      const results = await processReminders();
+      res.json({ 
+        success: true, 
+        message: `Processed ${results.length} reminders`,
+        results 
+      });
+    } catch (error) {
+      console.error('Reminder processing error:', error);
+      res.status(500).json({ 
+        error: "Failed to process reminders",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/reminders/test", async (req, res) => {
+    try {
+      const { email, billId, reminderType } = req.body;
+      
+      if (!email || !billId) {
+        return res.status(400).json({ error: "Email and billId required" });
+      }
+
+      const { sendTestReminder } = await import('./reminder-service');
+      const result = await sendTestReminder(email, billId, reminderType || '2-days');
+      
+      res.json({ success: result.success, result });
+    } catch (error) {
+      res.status(500).json({ 
+        error: "Failed to send test reminder",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // ========== STRIPE PAYMENT PROCESSING ENDPOINTS ==========
   
   // Stripe webhook endpoint - MUST be before JSON body parsing

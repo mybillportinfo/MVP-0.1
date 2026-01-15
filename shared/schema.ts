@@ -20,6 +20,7 @@ export const bills = pgTable("bills", {
   priority: text("priority").$type<"urgent" | "medium" | "low">().notNull(),
   icon: text("icon").notNull(),
   isPaid: integer("is_paid").default(0).notNull(), // 0 = false, 1 = true
+  billType: text("bill_type").$type<"hydro" | "internet" | "phone" | "subscription" | "other">().default("other"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
