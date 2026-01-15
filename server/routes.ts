@@ -7,7 +7,7 @@ import { insertBillSchema, insertPaymentSchema, insertRewardSchema } from "@shar
 import { z } from "zod";
 import { plaidClient } from "./plaid";
 import { scanBillImage } from './ai-scanner';
-import { scanEmailsForBills, getCategoryIcon } from './gmail';
+import { getAuthUrl, handleCallback, getConnectionStatus, disconnectGmail, scanEmailsForBillsOAuth } from './gmail-oauth';
 import { sendPaymentRequestEmail } from '../services/email';
 import nodemailer from 'nodemailer';
 import Stripe from "stripe";
@@ -1225,15 +1225,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Gmail OAuth routes
+  app.get("/api/gmail/status", async (req, res) => {
+    try {
+      const status = await getConnectionStatus();
+      res.json(status);
+    } catch (error: any) {
+      res.json({ connected: false });
+    }
+  });
+
+  app.get("/api/gmail/connect", async (req, res) => {
+    try {
+      const authUrl = getAuthUrl();
+      res.json({ authUrl });
+    } catch (error: any) {
+      console.error('Gmail connect error:', error);
+      res.status(500).json({ 
+        error: error.message || 'Failed to generate auth URL',
+        needsCredentials: error.message?.includes('not configured')
+      });
+    }
+  });
+
+  app.get("/api/gmail/callback", async (req, res) => {
+    try {
+      const code = req.query.code as string;
+      if (!code) {
+        return res.redirect('/email-bills?error=no_code');
+      }
+
+      const result = await handleCallback(code);
+      res.redirect(`/email-bills?connected=true&email=${encodeURIComponent(result.email)}`);
+    } catch (error: any) {
+      console.error('Gmail callback error:', error);
+      res.redirect(`/email-bills?error=${encodeURIComponent(error.message)}`);
+    }
+  });
+
+  app.post("/api/gmail/disconnect", async (req, res) => {
+    try {
+      await disconnectGmail();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Gmail email bills scanning endpoint
   app.get("/api/email-bills", async (req, res) => {
     try {
-      const emailBills = await scanEmailsForBills(50);
+      const status = await getConnectionStatus();
+      
+      if (!status.connected) {
+        return res.status(400).json({
+          success: false,
+          error: "Gmail not connected. Please connect your Gmail account first.",
+          needsConnection: true
+        });
+      }
+
+      const emailBills = await scanEmailsForBillsOAuth(50);
       
       res.json({
         success: true,
         bills: emailBills,
         count: emailBills.length,
+        connectedEmail: status.email,
         message: "Email scan completed"
       });
     } catch (error: any) {
@@ -1242,11 +1300,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const errorMessage = error.message?.toLowerCase() || '';
       
       if (errorMessage.includes('gmail not connected') || 
-          errorMessage.includes('x_replit_token') ||
-          errorMessage.includes('insufficient permission')) {
+          errorMessage.includes('please connect') ||
+          errorMessage.includes('token expired')) {
         return res.status(400).json({
           success: false,
-          error: "Gmail not connected or insufficient permissions. Please reconnect your Gmail account.",
+          error: "Gmail not connected or session expired. Please reconnect your Gmail account.",
           needsConnection: true
         });
       }

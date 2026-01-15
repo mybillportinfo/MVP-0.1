@@ -61,6 +61,25 @@ export const insertRewardSchema = createInsertSchema(rewards).omit({
   createdAt: true,
 });
 
+export const gmailTokens = pgTable("gmail_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertGmailTokenSchema = createInsertSchema(gmailTokens).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertGmailToken = z.infer<typeof insertGmailTokenSchema>;
+export type GmailToken = typeof gmailTokens.$inferSelect;
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertBill = z.infer<typeof insertBillSchema>;
