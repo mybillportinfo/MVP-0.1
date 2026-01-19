@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { loginUser, resetPassword, signInWithGoogle, signInWithApple } from "@/lib/auth";
+import { loginUser, resetPassword, signInWithGoogle, signInWithApple, getFirebaseErrorMessage } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,21 +37,10 @@ export default function Login() {
       });
       setLocation("/app");
     } catch (err: any) {
-      let message = "Failed to sign in. Please try again.";
-      if (err.code === "auth/user-not-found") {
-        message = "No account found with this email.";
-      } else if (err.code === "auth/wrong-password") {
-        message = "Incorrect password. Please try again.";
-      } else if (err.code === "auth/invalid-email") {
-        message = "Please enter a valid email address.";
-      } else if (err.code === "auth/too-many-requests") {
-        message = "Too many failed attempts. Please try again later.";
-      } else if (err.code === "auth/invalid-credential") {
-        message = "Invalid email or password. Please check and try again.";
-      }
+      console.error("Login error:", err.code, err.message);
       toast({
         title: "Sign In Failed",
-        description: message,
+        description: getFirebaseErrorMessage(err.code),
         variant: "destructive",
       });
     } finally {
@@ -69,15 +58,10 @@ export default function Login() {
       });
       setLocation("/app");
     } catch (err: any) {
-      let message = "Google sign-in failed. Please try again.";
-      if (err.code === "auth/popup-closed-by-user") {
-        message = "Sign-in cancelled. Please try again.";
-      } else if (err.code === "auth/popup-blocked") {
-        message = "Pop-up was blocked. Please allow pop-ups and try again.";
-      }
+      console.error("Google sign-in error:", err.code, err.message);
       toast({
         title: "Google Sign-In Failed",
-        description: message,
+        description: getFirebaseErrorMessage(err.code),
         variant: "destructive",
       });
     } finally {
@@ -95,15 +79,10 @@ export default function Login() {
       });
       setLocation("/app");
     } catch (err: any) {
-      let message = "Apple sign-in failed. Please try again.";
-      if (err.code === "auth/popup-closed-by-user") {
-        message = "Sign-in cancelled. Please try again.";
-      } else if (err.code === "auth/popup-blocked") {
-        message = "Pop-up was blocked. Please allow pop-ups and try again.";
-      }
+      console.error("Apple sign-in error:", err.code, err.message);
       toast({
         title: "Apple Sign-In Failed",
-        description: message,
+        description: getFirebaseErrorMessage(err.code),
         variant: "destructive",
       });
     } finally {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { registerUser, signInWithGoogle, signInWithApple } from "@/lib/auth";
+import { registerUser, signInWithGoogle, signInWithApple, getFirebaseErrorMessage } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,17 +64,10 @@ export default function Signup() {
       });
       setLocation("/app");
     } catch (err: any) {
-      let message = "Failed to create account. Please try again.";
-      if (err.code === "auth/email-already-in-use") {
-        message = "An account with this email already exists.";
-      } else if (err.code === "auth/invalid-email") {
-        message = "Please enter a valid email address.";
-      } else if (err.code === "auth/weak-password") {
-        message = "Password is too weak. Please choose a stronger password.";
-      }
+      console.error("Registration error:", err.code, err.message);
       toast({
         title: "Sign Up Failed",
-        description: message,
+        description: getFirebaseErrorMessage(err.code),
         variant: "destructive",
       });
     } finally {
@@ -92,15 +85,10 @@ export default function Signup() {
       });
       setLocation("/app");
     } catch (err: any) {
-      let message = "Google sign-up failed. Please try again.";
-      if (err.code === "auth/popup-closed-by-user") {
-        message = "Sign-up cancelled. Please try again.";
-      } else if (err.code === "auth/popup-blocked") {
-        message = "Pop-up was blocked. Please allow pop-ups and try again.";
-      }
+      console.error("Google sign-up error:", err.code, err.message);
       toast({
         title: "Google Sign-Up Failed",
-        description: message,
+        description: getFirebaseErrorMessage(err.code),
         variant: "destructive",
       });
     } finally {
@@ -118,15 +106,10 @@ export default function Signup() {
       });
       setLocation("/app");
     } catch (err: any) {
-      let message = "Apple sign-up failed. Please try again.";
-      if (err.code === "auth/popup-closed-by-user") {
-        message = "Sign-up cancelled. Please try again.";
-      } else if (err.code === "auth/popup-blocked") {
-        message = "Pop-up was blocked. Please allow pop-ups and try again.";
-      }
+      console.error("Apple sign-up error:", err.code, err.message);
       toast({
         title: "Apple Sign-Up Failed",
-        description: message,
+        description: getFirebaseErrorMessage(err.code),
         variant: "destructive",
       });
     } finally {
