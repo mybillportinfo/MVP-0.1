@@ -9,12 +9,14 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes (January 19, 2026)
 - ✅ Full authentication system with Firebase Auth
 - ✅ Sign up / Sign in with email/password
-- ✅ Google Sign-In integration
-- ✅ Apple Sign-In integration  
+- ✅ Google Sign-In integration (OAuth configured for production domains)
+- ✅ Apple Sign-In button shows "Coming Soon" (requires Apple Developer setup)
 - ✅ AuthContext for app-wide user state management
 - ✅ Improved login/signup pages with error handling and loading states
 - ✅ Settings page shows real user info and proper logout
 - ✅ Password validation with visual requirements indicator
+- ✅ Fixed Firebase App Check enforcement blocking authentication
+- ✅ Added Firebase auth redirect URIs for production domains
 
 ## Previous Changes (January 16, 2026)
 - ✅ Complete UI redesign with premium dark theme (navy/charcoal + emerald)
