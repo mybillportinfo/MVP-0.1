@@ -45,4 +45,6 @@ integrations = ["javascript_anthropic:1.0.0", "javascript_database:1.0.0", "fire
 [userenv]
 
 [userenv.production]
+
+[userenv.shared]
 APP_URL = "https://mybillport.com"
