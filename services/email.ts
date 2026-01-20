@@ -12,8 +12,8 @@ function getCleanApiKey(): string {
   return apiKey;
 }
 
-// Use verified mybillport.com domain for branded emails
-const fromEmail = 'info@mybillport.com'; // Verified domain
+// Use verified MailerSend test domain (Gmail domains can't be verified)
+const fromEmail = 'mybillport@test-nrw7gymn9wng2k8e.mlsender.net';
 const fromName = process.env.FROM_NAME || 'MyBillPort';
 
 // Create MailerSend client with cleaned API key
