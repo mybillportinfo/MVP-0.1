@@ -21,6 +21,7 @@ export function getFirebaseErrorMessage(errorCode: string): string {
     "auth/too-many-requests": "Too many failed attempts. Please try again later.",
     "auth/popup-closed-by-user": "Sign-in cancelled. Please try again.",
     "auth/popup-blocked": "Pop-up was blocked. Please allow pop-ups for this site and try again.",
+    "auth/browser-storage-blocked": "Your browser is blocking sign-in. Please disable privacy/incognito mode or try a different browser.",
     "auth/cancelled-popup-request": "Sign-in cancelled. Please try again.",
     "auth/account-exists-with-different-credential": "An account already exists with this email using a different sign-in method.",
     "auth/network-request-failed": "Network error. Please check your internet connection.",
@@ -92,11 +93,42 @@ export async function signInWithGoogle(): Promise<UserCredential> {
     provider.setCustomParameters({
       prompt: 'select_account'
     });
+    
+    // Check for new user to send welcome email
     const result = await signInWithPopup(auth, provider);
     console.log("Google sign-in successful:", result.user.uid);
+    
+    // Check if this is a new user (first sign-in)
+    const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
+    if (isNewUser && result.user.email) {
+      try {
+        const response = await fetch('/api/auth/welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            email: result.user.email, 
+            displayName: result.user.displayName || undefined 
+          })
+        });
+        const emailResult = await response.json();
+        if (emailResult.success) {
+          console.log("Welcome email sent to:", result.user.email);
+        }
+      } catch (emailError) {
+        console.warn("Failed to send welcome email:", emailError);
+      }
+    }
+    
     return result;
   } catch (error: any) {
     console.error("Google sign-in error:", error.code, error.message);
+    
+    // Handle storage-partitioned browser errors
+    if (error.message?.includes('missing initial state') || 
+        error.message?.includes('storage-partitioned')) {
+      error.code = 'auth/browser-storage-blocked';
+    }
+    
     throw error;
   }
 }
