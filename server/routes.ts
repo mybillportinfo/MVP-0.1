@@ -1397,11 +1397,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve static HTML files for SEO/crawler compliance (privacy, terms)
   // These must be served as static HTML for Google OAuth verification
-  const publicDir = path.resolve(process.cwd(), "client", "public");
+  // Check both dev (client/public) and prod (dist/public) locations
+  const devPublicDir = path.resolve(process.cwd(), "client", "public");
+  const prodPublicDir = path.resolve(process.cwd(), "dist", "public");
+  
+  const getStaticFilePath = (filename: string): string | null => {
+    const devPath = path.join(devPublicDir, filename);
+    const prodPath = path.join(prodPublicDir, filename);
+    if (fs.existsSync(devPath)) return devPath;
+    if (fs.existsSync(prodPath)) return prodPath;
+    return null;
+  };
   
   app.get("/privacy", (req, res) => {
-    const privacyPath = path.join(publicDir, "privacy.html");
-    if (fs.existsSync(privacyPath)) {
+    const privacyPath = getStaticFilePath("privacy.html");
+    if (privacyPath) {
       res.sendFile(privacyPath);
     } else {
       res.status(404).send('Privacy page not found');
@@ -1413,8 +1423,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.get("/terms", (req, res) => {
-    const termsPath = path.join(publicDir, "terms.html");
-    if (fs.existsSync(termsPath)) {
+    const termsPath = getStaticFilePath("terms.html");
+    if (termsPath) {
       res.sendFile(termsPath);
     } else {
       res.status(404).send('Terms page not found');
