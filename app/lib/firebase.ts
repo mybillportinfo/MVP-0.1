@@ -82,4 +82,4 @@ export async function deleteBill(billId: string) {
   await deleteDoc(doc(db, "bills", billId));
 }
 
-export { User };
+export type { User };
