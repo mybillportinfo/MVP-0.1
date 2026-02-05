@@ -48,16 +48,12 @@ export function subscribeToAuth(callback: (user: User | null) => void) {
 }
 
 export async function addBill(userId: string, bill: Omit<Bill, 'id' | 'userId' | 'createdAt'>) {
-  // Ensure we have a current user before attempting Firestore write
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error('User must be authenticated to add bills');
   }
   
-  // Force refresh the ID token to ensure Firestore has valid credentials
   await currentUser.getIdToken(true);
-  
-  console.log('Adding bill for userId:', userId, 'currentUser:', currentUser.uid);
   
   const docRef = await addDoc(collection(db, "bills"), {
     ...bill,
@@ -65,32 +61,23 @@ export async function addBill(userId: string, bill: Omit<Bill, 'id' | 'userId' |
     dueDate: Timestamp.fromDate(new Date(bill.dueDate)),
     createdAt: Timestamp.now(),
   });
-  console.log('Bill added successfully with id:', docRef.id);
   return docRef.id;
 }
 
 export async function fetchBills(userId: string): Promise<Bill[]> {
   try {
-    // Ensure we have a current user before attempting Firestore read
     const currentUser = auth.currentUser;
     if (!currentUser) {
-      console.log('No authenticated user, returning empty bills');
       return [];
     }
     
-    // Force refresh the ID token to ensure Firestore has valid credentials
     await currentUser.getIdToken(true);
-    
-    console.log('fetchBills called for userId:', userId);
-    console.log('Current auth uid:', currentUser.uid);
-    console.log('Firebase projectId:', firebaseConfig.projectId);
     
     const q = query(
       collection(db, "bills"),
       where("userId", "==", userId)
     );
     const snapshot = await getDocs(q);
-    console.log('Firestore query successful, docs count:', snapshot.docs.length);
     
     const bills = snapshot.docs.map(doc => {
       const data = doc.data();
@@ -107,7 +94,6 @@ export async function fetchBills(userId: string): Promise<Bill[]> {
     return bills.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
   } catch (error) {
     console.error('Firestore fetchBills error:', error);
-    console.error('Auth currentUser at error time:', auth.currentUser?.uid);
     throw error;
   }
 }

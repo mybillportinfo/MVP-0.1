@@ -60,39 +60,28 @@ function subscribeToAuth(callback) {
     return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$firebase$2f$node_modules$2f40$firebase$2f$auth$2f$dist$2f$esm$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["onAuthStateChanged"])(auth, callback);
 }
 async function addBill(userId, bill) {
-    // Ensure we have a current user before attempting Firestore write
     const currentUser = auth.currentUser;
     if (!currentUser) {
         throw new Error('User must be authenticated to add bills');
     }
-    // Force refresh the ID token to ensure Firestore has valid credentials
     await currentUser.getIdToken(true);
-    console.log('Adding bill for userId:', userId, 'currentUser:', currentUser.uid);
     const docRef = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["addDoc"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["collection"])(db, "bills"), {
         ...bill,
         userId,
         dueDate: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"].fromDate(new Date(bill.dueDate)),
         createdAt: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Timestamp"].now()
     });
-    console.log('Bill added successfully with id:', docRef.id);
     return docRef.id;
 }
 async function fetchBills(userId) {
     try {
-        // Ensure we have a current user before attempting Firestore read
         const currentUser = auth.currentUser;
         if (!currentUser) {
-            console.log('No authenticated user, returning empty bills');
             return [];
         }
-        // Force refresh the ID token to ensure Firestore has valid credentials
         await currentUser.getIdToken(true);
-        console.log('fetchBills called for userId:', userId);
-        console.log('Current auth uid:', currentUser.uid);
-        console.log('Firebase projectId:', firebaseConfig.projectId);
         const q = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["query"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["collection"])(db, "bills"), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["where"])("userId", "==", userId));
         const snapshot = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getDocs"])(q);
-        console.log('Firestore query successful, docs count:', snapshot.docs.length);
         const bills = snapshot.docs.map((doc)=>{
             const data = doc.data();
             return {
@@ -108,7 +97,6 @@ async function fetchBills(userId) {
         return bills.sort((a, b)=>a.dueDate.getTime() - b.dueDate.getTime());
     } catch (error) {
         console.error('Firestore fetchBills error:', error);
-        console.error('Auth currentUser at error time:', auth.currentUser?.uid);
         throw error;
     }
 }
