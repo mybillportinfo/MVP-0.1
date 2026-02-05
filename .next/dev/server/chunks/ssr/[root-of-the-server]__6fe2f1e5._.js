@@ -164,8 +164,12 @@ async function addBill(userId, bill) {
 }
 async function fetchBills(userId) {
     try {
+        console.log('fetchBills called for userId:', userId);
+        console.log('Current auth state:', auth.currentUser?.uid);
+        console.log('Firebase projectId:', firebaseConfig.projectId);
         const q = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["query"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["collection"])(db, "bills"), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])("userId", "==", userId));
         const snapshot = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getDocs"])(q);
+        console.log('Firestore query successful, docs count:', snapshot.docs.length);
         const bills = snapshot.docs.map((doc)=>{
             const data = doc.data();
             return {
@@ -181,6 +185,7 @@ async function fetchBills(userId) {
         return bills.sort((a, b)=>a.dueDate.getTime() - b.dueDate.getTime());
     } catch (error) {
         console.error('Firestore fetchBills error:', error);
+        console.error('Auth currentUser at error time:', auth.currentUser?.uid);
         throw error;
     }
 }

@@ -59,11 +59,17 @@ export async function addBill(userId: string, bill: Omit<Bill, 'id' | 'userId' |
 
 export async function fetchBills(userId: string): Promise<Bill[]> {
   try {
+    console.log('fetchBills called for userId:', userId);
+    console.log('Current auth state:', auth.currentUser?.uid);
+    console.log('Firebase projectId:', firebaseConfig.projectId);
+    
     const q = query(
       collection(db, "bills"),
       where("userId", "==", userId)
     );
     const snapshot = await getDocs(q);
+    console.log('Firestore query successful, docs count:', snapshot.docs.length);
+    
     const bills = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -79,6 +85,7 @@ export async function fetchBills(userId: string): Promise<Bill[]> {
     return bills.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
   } catch (error) {
     console.error('Firestore fetchBills error:', error);
+    console.error('Auth currentUser at error time:', auth.currentUser?.uid);
     throw error;
   }
 }
