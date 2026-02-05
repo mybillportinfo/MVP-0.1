@@ -1,9 +1,15 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     match /bills/{billId} {
+      // Allow read only if authenticated and user owns the document
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Allow create only if authenticated and setting userId to own uid
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      
+      // Allow update/delete only if authenticated and user owns the document
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
   }
