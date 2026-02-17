@@ -3,14 +3,35 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /bills/{billId} {
-      // Allow read only if authenticated and user owns the document
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      
-      // Allow create only if authenticated and setting userId to own uid
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      
-      // Allow update/delete only if authenticated and user owns the document
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      match /payments/{paymentId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null;
+      }
+    }
+
+    match /notifications/{notifId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    match /payments/{paymentId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /userPreferences/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if false;
+      allow update, delete: if false;
     }
   }
 }

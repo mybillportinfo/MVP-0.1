@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Home, Plus, Settings, User, Bell, Shield, Lock, LogOut, ChevronRight, Loader2, X, Eye, EyeOff, KeyRound } from "lucide-react";
+import { ArrowLeft, Home, Plus, Settings, User, Bell, Shield, Lock, LogOut, ChevronRight, Loader2, X, Eye, EyeOff, KeyRound, MessageSquare } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 import { getUserPreferences, setUserPreferences } from '../lib/firebase';
 
@@ -134,6 +134,11 @@ export default function SettingsPage() {
         </div>
 
         <div className="bg-white rounded-xl overflow-hidden divide-y divide-slate-100">
+          <Link href="/feedback" className="block p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
+            <MessageSquare className="w-5 h-5 text-teal-500" />
+            <span className="flex-1 text-slate-800">Send Feedback</span>
+            <ChevronRight className="w-5 h-5 text-slate-400" />
+          </Link>
           <Link href="/privacy" className="block p-4 hover:bg-slate-50 transition-colors">
             <span className="text-slate-800">Privacy Policy</span>
           </Link>

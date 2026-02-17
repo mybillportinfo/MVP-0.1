@@ -6,7 +6,19 @@ BillPort is a Canadian bill management web app. Users can add bills, track them 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (February 13, 2026)
+## Recent Changes (February 17, 2026)
+- ✅ Dashboard pagination: bills load 10 at a time with "Load More" button
+- ✅ Escape key closes Edit Bill and Mark as Paid modals
+- ✅ Amount fields block negative/invalid characters (-, e, E, +)
+- ✅ Console.log cleanup for production readiness
+- ✅ Feedback page (/feedback): category selector + message form, writes to Firestore feedback collection
+- ✅ submitFeedback() function in firebase.ts with validation
+- ✅ Send Feedback link added to Settings page
+- ✅ Firebase Cloud Function (functions/index.js): sends email via Nodemailer on new feedback document
+- ✅ Firestore rules updated: feedback collection (create-only for authenticated users, no read/update/delete)
+- ✅ firebase.json updated with functions configuration
+
+## Previous Changes (February 13, 2026)
 - ✅ Recurring Intelligence Engine: auto-detects recurring bills when same biller appears 2+ times
 - ✅ detectRecurringPatterns() analyzes due date intervals to classify monthly/quarterly/yearly frequency
 - ✅ Confidence scoring: (matching intervals / total) * (min(occurrences,5) / 5), threshold 0.5
@@ -79,6 +91,7 @@ Preferred communication style: Simple, everyday language.
 - `/payment` - Payment redirect page: shows biller name + "Pay Now on [Biller] Website" button
 - `/notifications` - Notification list with type badges, mark read/mark all read
 - `/settings` - Profile, plan (3 bills free), notifications toggle, privacy/security modals
+- `/feedback` - Feedback form (category selector + message), writes to Firestore feedback collection
 - `/privacy` - Full privacy policy page (PIPEDA-compliant)
 - `/terms` - Full terms of service page
 
@@ -107,6 +120,7 @@ Preferred communication style: Simple, everyday language.
 - `notifications` - userId, title, message, type, relatedBillId, isRead, createdAt
 - `payments` - (top-level audit trail) userId, billId, amountPaid, paymentType, method, recordedVia, timestamp
 - `userPreferences` - inAppReminders (boolean)
+- `feedback` - userId, userEmail, userName, category, message, createdAt (create-only, no read/update/delete)
 
 ### Bill Status Values
 - **unpaid** - No payment made (paidAmount = 0)

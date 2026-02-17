@@ -1078,4 +1078,38 @@ export function checkForRecurringProvider(bills: Bill[], companyName: string, pr
   return { found: true, count: matches.length, frequency };
 }
 
+export interface FeedbackData {
+  category: string;
+  message: string;
+  userEmail: string;
+  userName: string;
+  userId: string;
+  createdAt: Date;
+}
+
+export async function submitFeedback(
+  userId: string,
+  userEmail: string,
+  userName: string,
+  category: string,
+  message: string
+): Promise<string> {
+  const db = getFirebaseDb();
+  if (!db) throw new Error('Database not available');
+  if (!category.trim()) throw new Error('Please select a category');
+  if (!message.trim()) throw new Error('Please enter a message');
+  if (message.trim().length < 10) throw new Error('Message must be at least 10 characters');
+
+  const docRef = await addDoc(collection(db, 'feedback'), {
+    userId,
+    userEmail,
+    userName: userName || 'BillPort User',
+    category: category.trim(),
+    message: message.trim(),
+    createdAt: serverTimestamp(),
+  });
+
+  return docRef.id;
+}
+
 export type { User };
