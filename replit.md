@@ -12,9 +12,13 @@ Preferred communication style: Simple, everyday language.
 - ✅ Amount fields block negative/invalid characters (-, e, E, +)
 - ✅ Console.log cleanup for production readiness
 - ✅ Feedback page (/feedback): category selector + message form, writes to Firestore feedback collection
-- ✅ submitFeedback() function in firebase.ts with validation
+- ✅ Floating FeedbackButton component: teal circle bottom-right on all pages (visible when logged in)
+- ✅ Feedback modal: category grid, message textarea, Cancel/Submit, overlay/Escape/X close
+- ✅ submitFeedback() enhanced with status, userAgent, page fields
+- ✅ react-hot-toast integrated: success/error toasts for feedback submission
 - ✅ Send Feedback link added to Settings page
 - ✅ Firebase Cloud Function (functions/index.js): sends email via Nodemailer on new feedback document
+- ✅ Cloud Function email includes page, status, userAgent fields
 - ✅ Firestore rules updated: feedback collection (create-only for authenticated users, no read/update/delete)
 - ✅ firebase.json updated with functions configuration
 

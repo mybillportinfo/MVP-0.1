@@ -47,7 +47,9 @@ export default function FeedbackPage() {
         user.email || '',
         user.displayName || 'BillPort User',
         category,
-        message
+        message,
+        typeof window !== 'undefined' ? window.location.pathname : '/feedback',
+        typeof navigator !== 'undefined' ? navigator.userAgent : ''
       );
       setSuccess(true);
       setCategory('');

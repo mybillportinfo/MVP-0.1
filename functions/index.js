@@ -13,6 +13,9 @@ function formatFeedbackEmail(data) {
   const message = data.message || "(No message provided)";
   const userEmail = data.userEmail || "Anonymous";
   const userName = data.userName || "Unknown";
+  const status = data.status || "new";
+  const page = data.page || "/";
+  const userAgent = data.userAgent || "Not provided";
   const createdAt = data.createdAt
     ? data.createdAt.toDate
       ? data.createdAt.toDate().toLocaleString("en-CA", { timeZone: "America/Toronto" })
@@ -45,9 +48,27 @@ function formatFeedbackEmail(data) {
             <td style="padding: 8px 12px; color: #1e293b;">${createdAt}</td>
           </tr>
           <tr>
+            <td style="padding: 8px 12px; font-weight: 600; color: #475569; vertical-align: top;">Status</td>
+            <td style="padding: 8px 12px; color: #1e293b;">
+              <span style="background: #dcfce7; color: #166534; padding: 2px 10px; border-radius: 12px; font-size: 13px; font-weight: 500;">${status}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; font-weight: 600; color: #475569; vertical-align: top;">Page</td>
+            <td style="padding: 8px 12px; color: #1e293b; font-family: monospace; font-size: 13px;">${page}</td>
+          </tr>
+          <tr>
             <td colspan="2" style="padding: 16px 12px 8px;">
               <div style="font-weight: 600; color: #475569; margin-bottom: 8px;">Message</div>
               <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; color: #334155; line-height: 1.6; white-space: pre-wrap;">${message}</div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding: 16px 12px 4px;">
+              <details style="cursor: pointer;">
+                <summary style="font-weight: 600; color: #94a3b8; font-size: 12px;">User Agent</summary>
+                <p style="color: #94a3b8; font-size: 11px; margin-top: 4px; word-break: break-all;">${userAgent}</p>
+              </details>
             </td>
           </tr>
         </table>
@@ -77,6 +98,7 @@ exports.sendFeedbackEmail = onDocumentCreated(
     console.log("New feedback received:", {
       category: data.category,
       userEmail: data.userEmail,
+      page: data.page,
       feedbackId: event.params.feedbackId,
     });
 

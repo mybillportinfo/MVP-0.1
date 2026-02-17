@@ -1092,7 +1092,9 @@ export async function submitFeedback(
   userEmail: string,
   userName: string,
   category: string,
-  message: string
+  message: string,
+  page?: string,
+  userAgent?: string
 ): Promise<string> {
   const db = getFirebaseDb();
   if (!db) throw new Error('Database not available');
@@ -1106,6 +1108,9 @@ export async function submitFeedback(
     userName: userName || 'BillPort User',
     category: category.trim(),
     message: message.trim(),
+    status: 'new',
+    page: page || '/',
+    userAgent: userAgent || '',
     createdAt: serverTimestamp(),
   });
 
