@@ -9,6 +9,7 @@ import { fetchBills, deleteBill, fetchNotifications, checkAndCreateDueDateNotifi
 import { CATEGORIES, getCategoryByValue, getSubcategory } from '../lib/categories';
 
 const FREE_PLAN_LIMIT = 3;
+const BILLS_PER_PAGE = 10;
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -37,6 +38,7 @@ export default function Dashboard() {
     notes: string;
   } | null>(null);
   const [editLoading, setEditLoading] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(BILLS_PER_PAGE);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -281,6 +283,23 @@ export default function Dashboard() {
     }
   };
 
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (editModal) setEditModal(null);
+        if (markPaidModal) setMarkPaidModal(null);
+      }
+    };
+    if (editModal || markPaidModal) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [editModal, markPaidModal]);
+
+  useEffect(() => {
+    setVisibleCount(BILLS_PER_PAGE);
+  }, [categoryFilter]);
+
   if (authLoading || (!user && !authLoading)) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex items-center justify-center">
@@ -292,6 +311,8 @@ export default function Dashboard() {
   const filteredBills = categoryFilter === 'all'
     ? bills
     : bills.filter(b => b.category === categoryFilter);
+  const visibleBills = filteredBills.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredBills.length;
   const unpaidBills = bills.filter(b => b.status !== 'paid');
   const totalOwing = unpaidBills.reduce((sum, b) => sum + (b.totalAmount - b.paidAmount), 0);
   const usedCategories = [...new Set(bills.map(b => b.category).filter(Boolean))] as string[];
@@ -424,7 +445,11 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-white font-semibold">Your Bills</h2>
           {!loading && (
-            <span className="text-xs text-slate-500">{filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''} {categoryFilter !== 'all' ? `in ${getCategoryByValue(categoryFilter)?.label || categoryFilter}` : `(${bills.length}/${FREE_PLAN_LIMIT} used)`}</span>
+            <span className="text-xs text-slate-500">
+              {filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''}
+              {hasMore ? ` (showing ${visibleCount})` : ''}
+              {categoryFilter !== 'all' ? ` in ${getCategoryByValue(categoryFilter)?.label || categoryFilter}` : ` (${bills.length}/${FREE_PLAN_LIMIT} used)`}
+            </span>
           )}
         </div>
 
@@ -445,7 +470,7 @@ export default function Dashboard() {
             <button onClick={() => setCategoryFilter('all')} className="text-teal-400 text-sm underline hover:no-underline">Show all bills</button>
           </div>
         ) : (
-          filteredBills.map((bill) => {
+          visibleBills.map((bill) => {
             const isConfirming = confirmDeleteId === bill.id;
             const isFullyPaid = bill.status === "paid";
             const isPartial = bill.status === "partial";
@@ -710,6 +735,17 @@ export default function Dashboard() {
         )}
       </div>
 
+      {!loading && hasMore && (
+        <div className="px-4 mt-3">
+          <button
+            onClick={() => setVisibleCount(prev => prev + BILLS_PER_PAGE)}
+            className="w-full py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 transition-colors text-sm font-medium"
+          >
+            Load More ({filteredBills.length - visibleCount} remaining)
+          </button>
+        </div>
+      )}
+
       {!loading && !isAtLimit && bills.length > 0 && (
         <div className="px-4 mt-4">
           <Link
@@ -856,6 +892,7 @@ export default function Dashboard() {
                     min="0.01"
                     value={editModal.totalAmount}
                     onChange={(e) => setEditModal(prev => prev ? { ...prev, totalAmount: e.target.value } : null)}
+                    onKeyDown={(e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault(); }}
                     className="w-full pl-7 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-800 text-sm"
                   />
                 </div>

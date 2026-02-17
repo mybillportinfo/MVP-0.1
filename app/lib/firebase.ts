@@ -883,7 +883,6 @@ export async function migrateBillsAddCategory(): Promise<{ updated: number; skip
     await batch.commit();
   }
 
-  console.log(`Migration complete: ${updated} updated, ${skipped} skipped, ${total} total`);
   return { updated, skipped, total };
 }
 

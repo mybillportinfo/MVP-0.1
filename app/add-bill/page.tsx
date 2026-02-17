@@ -396,6 +396,7 @@ export default function AddBillPage() {
                 type="number"
                 value={totalAmount}
                 onChange={(e) => setTotalAmount(e.target.value)}
+                onKeyDown={(e) => { if (['-', 'e', 'E', '+'].includes(e.key)) e.preventDefault(); }}
                 placeholder="0.00"
                 step="0.01"
                 min="0.01"
