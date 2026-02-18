@@ -134,11 +134,11 @@ export default function SettingsPage() {
         </div>
 
         <div className="bg-white rounded-xl overflow-hidden divide-y divide-slate-100">
-          <Link href="/feedback" className="block p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
+          <a href="https://formspree.io/f/mpqjlqwz" target="_blank" rel="noopener noreferrer" className="block p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
             <MessageSquare className="w-5 h-5 text-teal-500" />
             <span className="flex-1 text-slate-800">Send Feedback</span>
             <ChevronRight className="w-5 h-5 text-slate-400" />
-          </Link>
+          </a>
           <Link href="/privacy" className="block p-4 hover:bg-slate-50 transition-colors">
             <span className="text-slate-800">Privacy Policy</span>
           </Link>
