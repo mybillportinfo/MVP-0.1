@@ -1,12 +1,11 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
-const nodemailer = require("nodemailer");
+const { MailerSend, EmailParams, Sender, Recipient } = require("mailersend");
 
 admin.initializeApp();
 
-const gmailEmail = defineSecret("GMAIL_EMAIL");
-const gmailPassword = defineSecret("GMAIL_APP_PASSWORD");
+const mailerSendApiKey = defineSecret("MAILERSEND_API_KEY");
 
 function formatFeedbackEmail(data) {
   const category = data.category || "General";
@@ -85,7 +84,7 @@ function formatFeedbackEmail(data) {
 exports.sendFeedbackEmail = onDocumentCreated(
   {
     document: "feedback/{feedbackId}",
-    secrets: [gmailEmail, gmailPassword],
+    secrets: [mailerSendApiKey],
   },
   async (event) => {
     const snapshot = event.data;
@@ -102,26 +101,24 @@ exports.sendFeedbackEmail = onDocumentCreated(
       feedbackId: event.params.feedbackId,
     });
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: gmailEmail.value(),
-        pass: gmailPassword.value(),
-      },
-    });
-
     const { subject, html } = formatFeedbackEmail(data);
 
-    const mailOptions = {
-      from: `"BillPort Feedback" <${gmailEmail.value()}>`,
-      to: "mybillportinfo@gmail.com",
-      replyTo: data.userEmail || undefined,
-      subject,
-      html,
-    };
+    const mailerSend = new MailerSend({
+      apiKey: mailerSendApiKey.value(),
+    });
+
+    const sentFrom = new Sender("no-reply@mybillport.com", "MyBillPort");
+    const recipients = [new Recipient("mybillportinfo@gmail.com", "Admin")];
+
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(recipients)
+      .setReplyTo(data.userEmail ? new Sender(data.userEmail, data.userName || "User") : sentFrom)
+      .setSubject(subject)
+      .setHtml(html);
 
     try {
-      await transporter.sendMail(mailOptions);
+      await mailerSend.email.send(emailParams);
       console.log("Feedback email sent successfully for:", event.params.feedbackId);
     } catch (error) {
       console.error("Failed to send feedback email:", error);

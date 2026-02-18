@@ -17,7 +17,7 @@ Preferred communication style: Simple, everyday language.
 - ✅ submitFeedback() enhanced with status, userAgent, page fields
 - ✅ react-hot-toast integrated: success/error toasts for feedback submission
 - ✅ Send Feedback link added to Settings page
-- ✅ Firebase Cloud Function (functions/index.js): sends email via Nodemailer on new feedback document
+- ✅ Firebase Cloud Function (functions/index.js): sends email via MailerSend on new feedback document
 - ✅ Cloud Function email includes page, status, userAgent fields
 - ✅ Firestore rules updated: feedback collection (create-only for authenticated users, no read/update/delete)
 - ✅ firebase.json updated with functions configuration
