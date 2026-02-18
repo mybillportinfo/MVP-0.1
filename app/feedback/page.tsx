@@ -5,24 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Send, Loader2, CheckCircle, MessageSquare, Home, Plus, Settings } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { submitFeedback } from '../lib/firebase';
-
-const FEEDBACK_CATEGORIES = [
-  { value: 'bug', label: 'Bug Report', icon: '🐛' },
-  { value: 'feature', label: 'Feature Request', icon: '💡' },
-  { value: 'billing', label: 'Billing Question', icon: '💳' },
-  { value: 'usability', label: 'Usability', icon: '🎯' },
-  { value: 'general', label: 'General Feedback', icon: '📝' },
-];
+import toast from 'react-hot-toast';
 
 export default function FeedbackPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [category, setCategory] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -33,29 +23,32 @@ export default function FeedbackPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-    if (!category) { setError('Please select a category'); return; }
-    if (!message.trim()) { setError('Please enter a message'); return; }
-    if (message.trim().length < 10) { setError('Message must be at least 10 characters'); return; }
+    if (!message.trim()) {
+      toast.error('Please enter a message');
+      return;
+    }
 
     setIsSubmitting(true);
-    setError(null);
 
     try {
-      await submitFeedback(
-        user.uid,
-        user.email || '',
-        user.displayName || 'BillPort User',
-        category,
-        message,
-        typeof window !== 'undefined' ? window.location.pathname : '/feedback',
-        typeof navigator !== 'undefined' ? navigator.userAgent : ''
-      );
-      setSuccess(true);
-      setCategory('');
-      setMessage('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit feedback. Please try again.');
+      const res = await fetch('https://formspree.io/f/mpqjlqwz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user?.email || 'anonymous',
+          message: message.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        setSuccess(true);
+        setMessage('');
+        toast.success('Feedback submitted — thank you!');
+      } else {
+        toast.error('Failed to submit feedback. Please try again.');
+      }
+    } catch {
+      toast.error('Failed to submit feedback. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -120,38 +113,11 @@ export default function FeedbackPage() {
             </div>
 
             <div className="p-5 space-y-5">
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                  {error}
-                </div>
-              )}
-
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Category *</label>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {FEEDBACK_CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.value}
-                      type="button"
-                      onClick={() => { setCategory(cat.value); setError(null); }}
-                      className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors text-left ${
-                        category === cat.value
-                          ? 'border-teal-500 bg-teal-50 text-teal-700'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="mr-1.5">{cat.icon}</span>
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Message *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Your message</label>
                 <textarea
                   value={message}
-                  onChange={(e) => { setMessage(e.target.value); setError(null); }}
+                  onChange={(e) => setMessage(e.target.value)}
                   placeholder="Describe your feedback, issue, or suggestion in detail..."
                   rows={5}
                   maxLength={2000}
