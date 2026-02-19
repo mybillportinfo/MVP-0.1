@@ -1,4 +1,4 @@
 {
   "/api/extract-bill/route": "app/api/extract-bill/route.js",
-  "/page": "app/page.js"
+  "/signup/page": "app/signup/page.js"
 }
