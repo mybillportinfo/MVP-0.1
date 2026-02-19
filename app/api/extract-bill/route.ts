@@ -8,6 +8,8 @@ import {
   validateAndSanitizeExtraction,
 } from '../../lib/extractionGuards';
 
+export const runtime = "nodejs";
+
 const DEFAULT_MODEL = "claude-sonnet-4-5";
 
 const EXTRACTION_PROMPT = `You are an expert bill/invoice data extractor for Canadian bills. Analyze this bill and extract the following information as accurately as possible.
@@ -33,17 +35,15 @@ Rules:
 - Canadian bills may use DD/MM/YYYY format. Normalize to YYYY-MM-DD.
 - If multiple amounts exist, pick the one closest to "Total Due" or "Amount Due".
 - Confidence scores reflect how certain you are about each extracted value.
+- If amount not confidently found, set confidenceAmount below 0.5.
+- If date invalid or uncertain, set confidenceDueDate below 0.5.
 - Return ONLY the JSON object, no markdown, no explanation.`;
 
 
 export async function POST(request: NextRequest) {
   try {
-    const ownApiKey = process.env.ANTHROPIC_API_KEY;
-    const replitApiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
-    const replitBaseURL = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
-
-    const apiKey = ownApiKey || replitApiKey;
-    const baseURL = ownApiKey ? 'https://api.anthropic.com' : replitBaseURL;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    console.log("KEY EXISTS:", !!apiKey);
 
     if (!apiKey) {
       return NextResponse.json({ success: false, error: 'AI service not configured' }, { status: 500 });
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     const startTime = Date.now();
-    const anthropic = new Anthropic({ apiKey, baseURL });
+    const anthropic = new Anthropic({ apiKey });
     let extractedJson: any;
 
     if (fileType === 'image') {
@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
       const response = await anthropic.messages.create({
         model: DEFAULT_MODEL,
         max_tokens: 8192,
+        temperature: 0,
         messages: [{
           role: 'user',
           content: [
@@ -121,6 +122,7 @@ export async function POST(request: NextRequest) {
       const response = await anthropic.messages.create({
         model: DEFAULT_MODEL,
         max_tokens: 8192,
+        temperature: 0,
         messages: [{
           role: 'user',
           content: [

@@ -8,9 +8,10 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (February 19, 2026)
 - ✅ Smart Add Bill: 4 input methods (Search Company, Camera Scan, Upload Photo, Upload PDF)
-- ✅ AI-powered bill extraction: Claude Vision (claude-sonnet-4-20250514) analyzes bill images/PDFs
-- ✅ API route `/api/extract-bill`: accepts base64 image/PDF, returns structured bill data
-- ✅ PDF text extraction via pdf-parse library + Claude text analysis
+- ✅ AI-powered bill extraction: Claude Vision (claude-sonnet-4-5) analyzes bill images/PDFs
+- ✅ API route `/api/extract-bill`: accepts base64 image/PDF, returns structured bill data (runtime="nodejs" for Vercel)
+- ✅ PDF extraction via Claude document API (no pdf-parse dependency)
+- ✅ Vercel-ready: uses only ANTHROPIC_API_KEY (no Replit dependency in production)
 - ✅ Provider fuzzy matching (app/lib/fuzzyMatch.ts): Levenshtein + token overlap for vendor → provider matching
 - ✅ Smart Review UI: "Smart Bill Detected" screen with confidence indicators (High/Medium/Low per field)
 - ✅ Editable extracted fields: all AI-extracted data is pre-filled but fully editable before confirm
