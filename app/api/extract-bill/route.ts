@@ -38,9 +38,14 @@ Rules:
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
-    const baseURL = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
-    if (!apiKey || !baseURL) {
+    const ownApiKey = process.env.ANTHROPIC_API_KEY;
+    const replitApiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+    const replitBaseURL = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+
+    const apiKey = ownApiKey || replitApiKey;
+    const baseURL = ownApiKey ? 'https://api.anthropic.com' : replitBaseURL;
+
+    if (!apiKey) {
       return NextResponse.json({ success: false, error: 'AI service not configured' }, { status: 500 });
     }
 
