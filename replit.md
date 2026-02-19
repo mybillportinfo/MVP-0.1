@@ -20,6 +20,16 @@ Preferred communication style: Simple, everyday language.
 - ✅ Error handling with "Try Again" or "Enter Manually" fallbacks
 - ✅ File size limit: 10MB max per upload
 - ✅ Existing manual company search preserved as primary method
+- ✅ Rate limiting: per-user 10 scans/day, server-side enforcement in /api/extract-bill
+- ✅ Duplicate file detection: content hash prevents re-scanning same file within 1 hour
+- ✅ Duplicate bill detection: vendor+amount+dueDate comparison against existing bills before confirm
+- ✅ Validation & sanitization (app/lib/extractionGuards.ts): amount format, date normalization, impossible date rejection
+- ✅ Double-submission prevention: isSubmitting guard + AbortController timeout (60s)
+- ✅ Validation warnings UI: blue banner shows date/amount issues from AI extraction
+- ✅ Duplicate warning UI: amber banner flags possible duplicate bills with dismiss option
+- ✅ Strict amount validation: rejects NaN, Infinity, negative, >$1M
+- ✅ Strict date validation: rejects >2 years future, invalid format, NaN dates
+- ✅ Usage logging: server logs userId, fileType, processingMs per extraction
 
 ## Previous Changes (February 17, 2026)
 - ✅ Dashboard pagination: bills load 10 at a time with "Load More" button

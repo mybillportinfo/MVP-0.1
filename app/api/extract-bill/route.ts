@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { fuzzyMatchProvider } from '../../lib/fuzzyMatch';
+import {
+  checkRateLimit,
+  getContentHash,
+  checkFileHashDuplicate,
+  validateAndSanitizeExtraction,
+} from '../../lib/extractionGuards';
 
-// "claude-sonnet-4-20250514" is the latest model
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
 const EXTRACTION_PROMPT = `You are an expert bill/invoice data extractor for Canadian bills. Analyze this bill and extract the following information as accurately as possible.
@@ -68,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { fileData, fileType, mimeType } = body;
+    const { fileData, fileType, mimeType, userId } = body;
 
     if (!fileData || !fileType) {
       return NextResponse.json({ success: false, error: 'Missing file data' }, { status: 400 });
@@ -84,6 +89,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unsupported file type' }, { status: 400 });
     }
 
+    const rateLimitKey = userId || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+
+    const rateCheck = checkRateLimit(rateLimitKey);
+    if (!rateCheck.allowed) {
+      const hoursLeft = Math.ceil(rateCheck.resetsIn / (1000 * 60 * 60));
+      return NextResponse.json({
+        success: false,
+        error: `You've reached the daily scan limit (10 scans/day). Try again in ${hoursLeft} hour${hoursLeft > 1 ? 's' : ''}.`,
+        rateLimited: true,
+        resetsIn: rateCheck.resetsIn,
+      }, { status: 429 });
+    }
+
+    const fileHash = getContentHash(fileData);
+    if (checkFileHashDuplicate(rateLimitKey, fileHash)) {
+      return NextResponse.json({
+        success: false,
+        error: 'This file was already scanned recently. Use the previous result or try a different file.',
+        duplicateFile: true,
+      }, { status: 409 });
+    }
+
+    const startTime = Date.now();
     const anthropic = new Anthropic({ apiKey });
     let extractedJson: any;
 
@@ -137,15 +165,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unsupported file type' }, { status: 400 });
     }
 
+    const processingMs = Date.now() - startTime;
+    console.log(`[extract-bill] userId=${userId || 'anon'} fileType=${fileType} processingMs=${processingMs} success=${!!extractedJson}`);
+
     if (!extractedJson) {
       return NextResponse.json({ success: false, error: 'Failed to parse bill data. Please try again or enter manually.' }, { status: 422 });
     }
 
     const providerMatch = fuzzyMatchProvider(extractedJson.vendor || '');
 
-    const result = {
+    const rawResult = {
       vendor: extractedJson.vendor || '',
-      amount: extractedJson.amount || null,
+      amount: extractedJson.amount ?? null,
       dueDate: extractedJson.dueDate || null,
       billingPeriod: extractedJson.billingPeriod || null,
       accountNumber: extractedJson.accountNumber || null,
@@ -163,7 +194,23 @@ export async function POST(request: NextRequest) {
       isCustomProvider: !providerMatch,
     };
 
-    return NextResponse.json({ success: true, data: result });
+    const validation = validateAndSanitizeExtraction(rawResult as any);
+
+    if (validation.correctedAmount !== undefined) {
+      rawResult.amount = validation.correctedAmount;
+    }
+    if (validation.correctedDate !== undefined) {
+      rawResult.dueDate = validation.correctedDate;
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: rawResult,
+      validation: {
+        warnings: validation.warnings,
+        errors: validation.errors,
+      },
+    });
   } catch (error: any) {
     console.error('Bill extraction error:', error);
     return NextResponse.json(

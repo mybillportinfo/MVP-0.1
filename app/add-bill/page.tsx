@@ -18,6 +18,7 @@ import { CATEGORIES, BILLING_CYCLES, getCategoryByValue, getSubcategory, type Me
 import { resolveProvider } from '../lib/providerRegistry';
 import ProviderAutocomplete from '../components/ProviderAutocomplete';
 import type { BillExtractionResult } from '../lib/billExtraction';
+import { checkForDuplicate, type DuplicateCheckResult } from '../lib/extractionGuards';
 
 const FREE_PLAN_LIMIT = 3;
 type AddMethod = 'select' | 'search' | 'scan' | 'review';
@@ -30,6 +31,9 @@ export default function AddBillPage() {
   const [extractedData, setExtractedData] = useState<BillExtractionResult | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [duplicateWarning, setDuplicateWarning] = useState<DuplicateCheckResult | null>(null);
+  const [dismissedDuplicate, setDismissedDuplicate] = useState(false);
 
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
@@ -96,8 +100,12 @@ export default function AddBillPage() {
   const isAtLimit = billCount !== null && billCount >= FREE_PLAN_LIMIT;
 
   const handleFileUpload = async (file: File, uploadMethod: string) => {
+    if (isExtracting) return;
     setIsExtracting(true);
     setExtractionError(null);
+    setValidationWarnings([]);
+    setDuplicateWarning(null);
+    setDismissedDuplicate(false);
 
     try {
       const maxSize = 10 * 1024 * 1024;
@@ -110,6 +118,9 @@ export default function AddBillPage() {
       const base64 = await fileToBase64(file);
       const isPdf = file.type === 'application/pdf';
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+
       const response = await fetch('/api/extract-bill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,9 +128,12 @@ export default function AddBillPage() {
           fileData: base64,
           fileType: isPdf ? 'pdf' : 'image',
           mimeType: file.type,
+          userId: user?.uid || '',
         }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeout);
       const result = await response.json();
 
       if (!result.success) {
@@ -128,12 +142,29 @@ export default function AddBillPage() {
         return;
       }
 
+      if (result.validation?.warnings?.length > 0) {
+        setValidationWarnings(result.validation.warnings);
+      }
+
+      const dupCheck = checkForDuplicate(
+        { vendor: result.data.vendor, amount: result.data.amount, dueDate: result.data.dueDate },
+        existingBills,
+        result.data.matchedProviderId
+      );
+      if (dupCheck.isDuplicate) {
+        setDuplicateWarning(dupCheck);
+      }
+
       setExtractedData(result.data);
       prefillFromExtraction(result.data);
       setMethod('review');
       toast.success('Bill data extracted successfully!');
-    } catch (err) {
-      setExtractionError('Failed to process file. Please try again or enter manually.');
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        setExtractionError('Request timed out. Please try again with a smaller file.');
+      } else {
+        setExtractionError('Failed to process file. Please try again or enter manually.');
+      }
     } finally {
       setIsExtracting(false);
     }
@@ -177,18 +208,31 @@ export default function AddBillPage() {
     e.preventDefault();
     setError(null);
 
+    if (isSubmitting) return;
     if (!user) { setError('You must be logged in'); return; }
     if (isAtLimit) { setError(`Free plan allows up to ${FREE_PLAN_LIMIT} bills. Upgrade to add more.`); return; }
     if (!category) { setError('Please select a category'); return; }
     if (!companyName.trim()) { setError('Please enter a provider / company name'); return; }
     if (!accountNumber.trim()) { setError('Please enter an account number'); return; }
-    if (!totalAmount || parseFloat(totalAmount) <= 0) { setError('Please enter a valid amount greater than $0'); return; }
+
+    const parsedAmount = parseFloat(totalAmount);
+    if (!totalAmount || isNaN(parsedAmount) || !isFinite(parsedAmount) || parsedAmount <= 0) {
+      setError('Please enter a valid amount greater than $0'); return;
+    }
+    if (parsedAmount > 1000000) {
+      setError('Amount cannot exceed $1,000,000. Please verify the amount.'); return;
+    }
+
     if (!dueDate) { setError('Please select a due date'); return; }
 
     const selectedDate = new Date(dueDate + 'T00:00:00');
+    if (isNaN(selectedDate.getTime())) { setError('Invalid date format. Please select a valid date.'); return; }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (selectedDate < today) { setError('Due date must be today or a future date'); return; }
+    const twoYearsOut = new Date(today);
+    twoYearsOut.setFullYear(today.getFullYear() + 2);
+    if (selectedDate > twoYearsOut) { setError('Due date cannot be more than 2 years in the future.'); return; }
 
     setIsSubmitting(true);
     try {
@@ -240,6 +284,9 @@ export default function AddBillPage() {
     setMethod('select');
     setExtractedData(null);
     setExtractionError(null);
+    setValidationWarnings([]);
+    setDuplicateWarning(null);
+    setDismissedDuplicate(false);
     setCategory('');
     setSubcategory('');
     setCompanyName('');
@@ -418,6 +465,28 @@ export default function AddBillPage() {
               <form onSubmit={handleSubmit} className="p-5 space-y-4">
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">{error}</div>
+                )}
+
+                {duplicateWarning && duplicateWarning.isDuplicate && !dismissedDuplicate && (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium">Possible duplicate detected</p>
+                      <p className="mt-0.5">{duplicateWarning.reason} — you already have a bill for "{duplicateWarning.matchedBillName}".</p>
+                    </div>
+                    <button type="button" onClick={() => setDismissedDuplicate(true)} className="text-amber-500 hover:text-amber-700 p-1">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {validationWarnings.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
+                    <p className="font-medium mb-1">Please verify:</p>
+                    <ul className="list-disc pl-5 space-y-0.5">
+                      {validationWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                    </ul>
+                  </div>
                 )}
 
                 {/* Category */}
