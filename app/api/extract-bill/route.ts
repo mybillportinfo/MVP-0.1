@@ -10,7 +10,7 @@ import {
 
 export const runtime = "nodejs";
 
-const DEFAULT_MODEL = "claude-sonnet-4-5";
+const DEFAULT_MODEL = "claude-3-5-sonnet-20241022";
 
 const EXTRACTION_PROMPT = `You are an expert bill/invoice data extractor for Canadian bills. Analyze this bill and extract the following information as accurately as possible.
 
@@ -192,9 +192,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Bill extraction error:', error);
+    console.error('Bill extraction error:', error?.status, error?.message, JSON.stringify(error?.error || ''));
     const errorMsg = error?.message || '';
-    if (errorMsg.includes('Could not process image') || error?.status === 400) {
+    if (errorMsg.includes('Could not process image') || errorMsg.includes('Could not process') || error?.status === 400) {
       return NextResponse.json(
         { success: false, error: 'Could not read the image. Please ensure the photo is clear, well-lit, and shows the bill details.' },
         { status: 400 }
