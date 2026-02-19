@@ -6,21 +6,27 @@ BillPort is a Canadian bill management web app. Users can add bills, track them 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (February 17, 2026)
+## Recent Changes (February 19, 2026)
+- ✅ Smart Add Bill: 4 input methods (Search Company, Camera Scan, Upload Photo, Upload PDF)
+- ✅ AI-powered bill extraction: Claude Vision (claude-sonnet-4-20250514) analyzes bill images/PDFs
+- ✅ API route `/api/extract-bill`: accepts base64 image/PDF, returns structured bill data
+- ✅ PDF text extraction via pdf-parse library + Claude text analysis
+- ✅ Provider fuzzy matching (app/lib/fuzzyMatch.ts): Levenshtein + token overlap for vendor → provider matching
+- ✅ Smart Review UI: "Smart Bill Detected" screen with confidence indicators (High/Medium/Low per field)
+- ✅ Editable extracted fields: all AI-extracted data is pre-filled but fully editable before confirm
+- ✅ Extraction types defined (app/lib/billExtraction.ts): BillExtractionResult, ExtractionRequest/Response
+- ✅ Method selection UI: cards for Search, Camera, Photo, PDF with sparkle indicators for AI features
+- ✅ Loading state with animated sparkle icon during AI analysis
+- ✅ Error handling with "Try Again" or "Enter Manually" fallbacks
+- ✅ File size limit: 10MB max per upload
+- ✅ Existing manual company search preserved as primary method
+
+## Previous Changes (February 17, 2026)
 - ✅ Dashboard pagination: bills load 10 at a time with "Load More" button
 - ✅ Escape key closes Edit Bill and Mark as Paid modals
 - ✅ Amount fields block negative/invalid characters (-, e, E, +)
 - ✅ Console.log cleanup for production readiness
-- ✅ Feedback page (/feedback): category selector + message form, writes to Firestore feedback collection
-- ✅ Floating FeedbackButton component: teal circle bottom-right on all pages (visible when logged in)
-- ✅ Feedback modal: category grid, message textarea, Cancel/Submit, overlay/Escape/X close
-- ✅ submitFeedback() enhanced with status, userAgent, page fields
-- ✅ react-hot-toast integrated: success/error toasts for feedback submission
-- ✅ Send Feedback link added to Settings page
-- ✅ Firebase Cloud Function (functions/index.js): sends email via MailerSend on new feedback document
-- ✅ Cloud Function email includes page, status, userAgent fields
-- ✅ Firestore rules updated: feedback collection (create-only for authenticated users, no read/update/delete)
-- ✅ firebase.json updated with functions configuration
+- ✅ Feedback simplified to Formspree integration (no Cloud Function needed)
 
 ## Previous Changes (February 13, 2026)
 - ✅ Recurring Intelligence Engine: auto-detects recurring bills when same biller appears 2+ times
