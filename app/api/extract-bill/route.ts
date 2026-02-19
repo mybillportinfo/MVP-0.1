@@ -43,7 +43,7 @@ Rules:
 export async function POST(request: NextRequest) {
   try {
     const apiKeyRaw = process.env.ANTHROPIC_API_KEY;
-    const apiKey = apiKeyRaw ? apiKeyRaw.replace(/\s/g, '') : null;
+    const apiKey = apiKeyRaw ? apiKeyRaw.replace(/[\s\r\n\t]/g, '').trim() : null;
     console.log("KEY EXISTS:", !!apiKey);
 
     if (!apiKey) {
