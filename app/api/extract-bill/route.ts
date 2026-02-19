@@ -8,7 +8,7 @@ import {
   validateAndSanitizeExtraction,
 } from '../../lib/extractionGuards';
 
-const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+const DEFAULT_MODEL = "claude-sonnet-4-5";
 
 const EXTRACTION_PROMPT = `You are an expert bill/invoice data extractor for Canadian bills. Analyze this bill and extract the following information as accurately as possible.
 
@@ -67,8 +67,9 @@ Rules:
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
+    const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+    const baseURL = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+    if (!apiKey || !baseURL) {
       return NextResponse.json({ success: false, error: 'AI service not configured' }, { status: 500 });
     }
 
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
 
     const startTime = Date.now();
-    const anthropic = new Anthropic({ apiKey });
+    const anthropic = new Anthropic({ apiKey, baseURL });
     let extractedJson: any;
 
     if (fileType === 'image') {
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
 
       const response = await anthropic.messages.create({
         model: DEFAULT_MODEL,
-        max_tokens: 1024,
+        max_tokens: 8192,
         messages: [{
           role: 'user',
           content: [
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
 
       const response = await anthropic.messages.create({
         model: DEFAULT_MODEL,
-        max_tokens: 1024,
+        max_tokens: 8192,
         messages: [{ role: 'user', content: prompt }],
       });
 
@@ -213,6 +214,19 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Bill extraction error:', error);
+    const errorMsg = error?.message || '';
+    if (errorMsg.includes('Could not process image') || error?.status === 400) {
+      return NextResponse.json(
+        { success: false, error: 'Could not read the image. Please ensure the photo is clear, well-lit, and shows the bill details.' },
+        { status: 400 }
+      );
+    }
+    if (error?.status === 429) {
+      return NextResponse.json(
+        { success: false, error: 'AI service is temporarily busy. Please wait a moment and try again.' },
+        { status: 429 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to process bill. Please try again or enter manually.' },
       { status: 500 }
