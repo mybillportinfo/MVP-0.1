@@ -35,35 +35,6 @@ Rules:
 - Confidence scores reflect how certain you are about each extracted value.
 - Return ONLY the JSON object, no markdown, no explanation.`;
 
-const TEXT_EXTRACTION_PROMPT = `You are an expert bill/invoice data extractor for Canadian bills. Analyze this extracted bill text and extract the following information as accurately as possible.
-
-The following is OCR-extracted text from a bill document:
-
----
-{TEXT}
----
-
-Return ONLY a valid JSON object with these fields:
-{
-  "vendor": "Company/vendor name (clean, official name)",
-  "amount": <number or null if not found>,
-  "dueDate": "YYYY-MM-DD format or null if not found",
-  "billingPeriod": "e.g. Jan 1 - Jan 31, 2026 or null",
-  "accountNumber": "account/customer number or null",
-  "currency": "CAD or USD",
-  "category": "one of: utilities, telecom, government, insurance, banking, transportation, education, subscriptions, property, miscellaneous, or null",
-  "confidenceVendor": <0.0 to 1.0>,
-  "confidenceAmount": <0.0 to 1.0>,
-  "confidenceDueDate": <0.0 to 1.0>
-}
-
-Rules:
-- For amount: prefer "Total Due", "Amount Due", "Balance Due", "Total Amount" over subtotals.
-- For dates: prefer "Due Date", "Payment Due" over invoice date or billing date.
-- For vendor: use the official company name.
-- Canadian bills may use DD/MM/YYYY. Normalize to YYYY-MM-DD.
-- Confidence scores reflect certainty about each extracted value.
-- Return ONLY the JSON object, no markdown, no explanation.`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -142,22 +113,23 @@ export async function POST(request: NextRequest) {
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
       extractedJson = parseJsonResponse(text);
     } else if (fileType === 'pdf') {
-      const pdfParseModule = await import('pdf-parse') as any;
-      const pdfParse = pdfParseModule.default || pdfParseModule;
-      const pdfBuffer = Buffer.from(fileData, 'base64');
-      const pdfData = await pdfParse(pdfBuffer);
-      const pdfText = pdfData.text;
-
-      if (!pdfText || pdfText.trim().length < 10) {
-        return NextResponse.json({ success: false, error: 'Could not extract text from PDF. The PDF may be image-based — try uploading a photo instead.' }, { status: 400 });
-      }
-
-      const prompt = TEXT_EXTRACTION_PROMPT.replace('{TEXT}', pdfText.substring(0, 8000));
-
       const response = await anthropic.messages.create({
         model: DEFAULT_MODEL,
         max_tokens: 8192,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: EXTRACTION_PROMPT },
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: fileData,
+              },
+            } as any,
+          ],
+        }],
       });
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
