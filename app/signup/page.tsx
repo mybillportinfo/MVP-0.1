@@ -94,7 +94,7 @@ export default function Signup() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">Create Account</h1>
-              <p className="text-slate-400 text-sm">Join mu<span className="text-teal-500 italic">billport</span> today</p>
+              <p className="text-slate-400 text-sm">Join My<span className="text-teal-500 italic">billport</span> today</p>
             </div>
           </div>
 

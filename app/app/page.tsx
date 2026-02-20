@@ -340,7 +340,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            <span className="text-white font-bold text-xl tracking-tighter">mu<span className="text-teal-500">billport</span></span>
+            <span className="text-white font-bold text-xl tracking-tighter">My<span className="text-teal-500 italic">billport</span></span>
           </div>
           <Link href="/notifications" className="relative p-2 hover:bg-slate-800 rounded-lg transition-colors">
             <Bell className="w-6 h-6 text-slate-300" />

@@ -129,7 +129,7 @@ export default function NotificationsPage() {
               </div>
             </div>
             <div>
-              <h1 className="text-white text-xl font-bold tracking-tighter">mu<span className="text-teal-500">billport</span> Notifications</h1>
+              <h1 className="text-white text-xl font-bold tracking-tighter">My<span className="text-teal-500 italic">billport</span> Notifications</h1>
               <p className="text-slate-400 text-xs">
                 {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
               </p>
