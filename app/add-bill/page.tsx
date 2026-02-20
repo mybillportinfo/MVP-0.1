@@ -410,51 +410,18 @@ export default function AddBillPage() {
               </div>
             </button>
 
-            <button
-              onClick={() => cameraInputRef.current?.click()}
-              className="w-full bg-white rounded-xl p-5 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left"
-            >
-              <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Camera className="w-6 h-6 text-blue-600" />
+            <div className="w-full bg-slate-100 rounded-xl p-5 flex items-center gap-4 opacity-60 cursor-not-allowed">
+              <div className="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Camera className="w-6 h-6 text-slate-400" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-slate-800">Scan from Camera</p>
-                <p className="text-sm text-slate-500">Take a photo of your bill</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-slate-500">Scan, Upload Photo & PDF</p>
+                </div>
+                <p className="text-sm text-slate-400">AI-powered bill scanning</p>
               </div>
-              <Sparkles className="w-5 h-5 text-amber-500" />
-            </button>
-
-            <button
-              onClick={() => photoInputRef.current?.click()}
-              className="w-full bg-white rounded-xl p-5 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left"
-            >
-              <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <ImageIcon className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-slate-800">Upload Photo</p>
-                <p className="text-sm text-slate-500">Upload a bill image from your device</p>
-              </div>
-              <Sparkles className="w-5 h-5 text-amber-500" />
-            </button>
-
-            <button
-              onClick={() => pdfInputRef.current?.click()}
-              className="w-full bg-white rounded-xl p-5 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left"
-            >
-              <div className="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <FileText className="w-6 h-6 text-red-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-slate-800">Upload PDF</p>
-                <p className="text-sm text-slate-500">Upload a bill PDF document</p>
-              </div>
-              <Sparkles className="w-5 h-5 text-amber-500" />
-            </button>
-
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleInputChange(e, 'camera')} />
-            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleInputChange(e, 'photo')} />
-            <input ref={pdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => handleInputChange(e, 'pdf')} />
+              <span className="text-xs bg-slate-200 text-slate-500 px-3 py-1 rounded-full font-medium whitespace-nowrap">Coming Soon</span>
+            </div>
           </div>
         )}
 
