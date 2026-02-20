@@ -75,7 +75,12 @@ export default function SettingsPage() {
           <ArrowLeft className="w-5 h-5 mr-2" />
           Back to Dashboard
         </Link>
-        <h1 className="text-white text-2xl font-semibold">Settings</h1>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center border border-teal-400/30 shadow-[0_0_10px_rgba(20,184,166,0.2)]">
+            <Sparkles className="text-white w-6 h-6" />
+          </div>
+          <span className="text-white font-bold text-lg tracking-tight">My<span className="text-teal-400">BillPort</span></span>
+        </div>
         <p className="text-slate-400">Manage your preferences</p>
       </div>
 
@@ -87,7 +92,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex-1">
               <p className="font-semibold text-slate-800">
-                {user.displayName || 'BillPort User'}
+                {user.displayName || 'MyBillPort User'}
               </p>
               <p className="text-sm text-slate-500">{user.email}</p>
             </div>
@@ -156,7 +161,7 @@ export default function SettingsPage() {
         </button>
 
         <p className="text-center text-slate-600 text-xs pt-2">
-          BillPort v0.1 MVP
+          MyBillPort v1.0 Production
         </p>
       </div>
 

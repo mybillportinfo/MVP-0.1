@@ -49,10 +49,10 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 gradient-navy rounded-xl flex items-center justify-center border border-slate-600">
-              <span className="text-white font-bold text-lg">M</span>
+            <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center border border-teal-400/30 shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+              <Sparkles className="text-white w-6 h-6" />
             </div>
-            <span className="font-semibold text-xl text-white">BillPort</span>
+            <span className="font-bold text-xl text-white tracking-tight">My<span className="text-teal-400">BillPort</span></span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/app">
@@ -112,10 +112,10 @@ export default function LandingPage() {
                   {/* App Header */}
                   <div className="px-5 py-4">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 gradient-navy rounded-lg flex items-center justify-center border border-slate-600">
-                        <span className="text-white font-bold text-sm">M</span>
+                      <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center border border-teal-400/30">
+                        <Sparkles className="text-white w-5 h-5" />
                       </div>
-                      <span className="text-white font-semibold">BillPort</span>
+                      <span className="text-white font-bold tracking-tight">My<span className="text-teal-400">BillPort</span></span>
                     </div>
                     <p className="text-slate-400 text-sm">Good morning</p>
                     <p className="text-white text-xl font-semibold">Here&apos;s your overview</p>
@@ -278,10 +278,10 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 gradient-navy rounded-xl flex items-center justify-center border border-slate-600">
-                <span className="text-white font-bold text-lg">M</span>
+              <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center border border-teal-400/30 shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+                <Sparkles className="text-white w-6 h-6" />
               </div>
-              <span className="font-semibold text-xl text-white">BillPort</span>
+              <span className="font-bold text-xl text-white tracking-tight">My<span className="text-teal-400">BillPort</span></span>
             </div>
             <div className="flex flex-wrap gap-4 text-slate-400 text-sm">
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
@@ -289,7 +289,7 @@ export default function LandingPage() {
               <a href="mailto:mybillportinfo@gmail.com" className="hover:text-white transition-colors">Contact</a>
             </div>
             <p className="text-slate-500 text-sm">
-              &copy; 2026 BillPort. Made with care in Canada.
+              &copy; 2026 MyBillPort. Made with care in Canada.
             </p>
           </div>
         </div>

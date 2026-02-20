@@ -60,12 +60,12 @@ export default function Login() {
 
         <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 gradient-navy rounded-xl flex items-center justify-center border border-slate-600">
-              <span className="text-white font-bold text-xl">M</span>
+            <div className="w-12 h-12 bg-teal-500 rounded-xl flex items-center justify-center border border-teal-400/30 shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+              <Sparkles className="text-white w-7 h-7" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
-              <p className="text-slate-400 text-sm">Sign in to BillPort</p>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Welcome Back</h1>
+              <p className="text-slate-400 text-sm">Sign in to My<span className="text-teal-400">BillPort</span></p>
             </div>
           </div>
 

@@ -328,7 +328,14 @@ export default function AddBillPage() {
           <ArrowLeft className="w-5 h-5 mr-2" />
           {method === 'select' ? 'Back to Dashboard' : 'Back to Add Bill'}
         </button>
-        <h1 className="text-white text-2xl font-semibold">Add New Bill</h1>
+            <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center border border-teal-400/30 shadow-[0_0_10px_rgba(20,184,166,0.2)]">
+              <Sparkles className="text-white w-6 h-6" />
+            </div>
+            <span className="text-white font-bold text-lg tracking-tight">My<span className="text-teal-400">BillPort</span></span>
+          </div>
+        </div>
         <p className="text-slate-400">
           {method === 'select' ? 'Choose how to add your bill' :
            method === 'review' ? 'Review extracted bill details' :

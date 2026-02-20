@@ -536,7 +536,8 @@ export async function fetchNotifications(userId: string): Promise<AppNotificatio
     const q = query(
       collection(db, "notifications"),
       where("userId", "==", userId),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(50)
     );
     const snapshot = await getDocs(q);
 
