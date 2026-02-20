@@ -544,34 +544,51 @@ export async function fetchNotifications(userId: string): Promise<AppNotificatio
       );
       snapshot = await getDocs(q);
     } catch (indexError) {
-      console.warn('Notifications index query failed, using fallback:', indexError);
-      const fallbackQ = query(
-        collection(db, "notifications"),
-        where("userId", "==", userId),
-        limit(50)
-      );
-      snapshot = await getDocs(fallbackQ);
+      try {
+        const fallbackQ = query(
+          collection(db, "notifications"),
+          where("userId", "==", userId)
+        );
+        snapshot = await getDocs(fallbackQ);
+      } catch (fallbackError) {
+        return [];
+      }
     }
 
-    const results = snapshot.docs.map(d => {
-      const data = d.data();
-      return {
-        id: d.id,
-        userId: data.userId,
-        title: data.title,
-        message: data.message,
-        type: data.type || 'bill_added',
-        relatedBillId: data.relatedBillId || undefined,
-        isRead: data.isRead || false,
-        createdAt: data.createdAt?.toDate() || new Date(),
-      };
-    });
+    const results: AppNotification[] = [];
+    for (const d of snapshot.docs) {
+      try {
+        const data = d.data();
+        let createdAtDate: Date;
+        if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+          createdAtDate = data.createdAt.toDate();
+        } else if (data.createdAt instanceof Date) {
+          createdAtDate = data.createdAt;
+        } else if (typeof data.createdAt === 'string' || typeof data.createdAt === 'number') {
+          createdAtDate = new Date(data.createdAt);
+        } else {
+          createdAtDate = new Date();
+        }
+
+        results.push({
+          id: d.id,
+          userId: data.userId,
+          title: data.title || '',
+          message: data.message || '',
+          type: data.type || 'bill_added',
+          relatedBillId: data.relatedBillId || undefined,
+          isRead: data.isRead || false,
+          createdAt: createdAtDate,
+        });
+      } catch {
+        continue;
+      }
+    }
 
     results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return results;
   } catch (error) {
-    console.error('Firestore fetchNotifications error:', error);
-    throw error;
+    return [];
   }
 }
 
