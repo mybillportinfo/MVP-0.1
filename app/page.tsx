@@ -11,7 +11,9 @@ import {
   ArrowRight,
   Bell,
   Shield,
-  Zap
+  Zap,
+  Receipt,
+  DollarSign
 } from "lucide-react";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
@@ -48,11 +50,18 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shadow-sm">
-              <span className="text-teal-500 font-bold text-xl">M</span>
+          <div className="flex items-center gap-2 group">
+            <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.4)] transition-transform group-hover:scale-105">
+              <div className="relative">
+                <Receipt className="text-white w-6 h-6" />
+                <div className="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 border border-teal-500/30">
+                  <DollarSign className="text-teal-400 w-3 h-3" />
+                </div>
+              </div>
             </div>
-            <span className="font-bold text-xl text-white tracking-tight">My<span className="text-teal-500">BillPort</span></span>
+            <span className="font-bold text-2xl tracking-tighter text-white">
+              mu<span className="text-teal-500">billport</span>
+            </span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/app">
@@ -112,10 +121,13 @@ export default function LandingPage() {
                   {/* App Header */}
                   <div className="px-5 py-4">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700 shadow-sm">
-                        <span className="text-teal-500 font-bold text-sm">M</span>
+                      <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(20,184,166,0.3)]">
+                        <div className="relative">
+                          <Receipt className="text-white w-5 h-5" />
+                          <DollarSign className="text-teal-200 w-2.5 h-2.5 absolute -bottom-0.5 -right-0.5" />
+                        </div>
                       </div>
-                      <span className="text-white font-bold tracking-tight">My<span className="text-teal-500">BillPort</span></span>
+                      <span className="text-white font-bold tracking-tighter text-lg">mu<span className="text-teal-500">billport</span></span>
                     </div>
                     <p className="text-slate-400 text-sm">Good morning</p>
                     <p className="text-white text-xl font-semibold">Here&apos;s your overview</p>
@@ -277,11 +289,18 @@ export default function LandingPage() {
       <footer className="py-12 px-4 border-t border-slate-800">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shadow-sm">
-                <span className="text-teal-500 font-bold text-xl">M</span>
+            <div className="flex items-center gap-2 group">
+              <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.4)]">
+                <div className="relative">
+                  <Receipt className="text-white w-6 h-6" />
+                  <div className="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 border border-teal-500/30">
+                    <DollarSign className="text-teal-400 w-3 h-3" />
+                  </div>
+                </div>
               </div>
-              <span className="font-bold text-xl text-white tracking-tight">My<span className="text-teal-500">BillPort</span></span>
+              <span className="font-bold text-2xl tracking-tighter text-white">
+                mu<span className="text-teal-500">billport</span>
+              </span>
             </div>
             <div className="flex flex-wrap gap-4 text-slate-400 text-sm">
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>

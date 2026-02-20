@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { Home, Plus, Settings, Loader2, Trash2, AlertTriangle, Bell, DollarSign, CheckCircle, ExternalLink, Check, X, Clock, ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { Home, Plus, Settings, Loader2, Trash2, AlertTriangle, Bell, DollarSign, CheckCircle, ExternalLink, Check, X, Clock, ChevronDown, ChevronUp, Pencil, Receipt } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 import { fetchBills, deleteBill, fetchNotifications, checkAndCreateDueDateNotifications, sortBills, Bill, markBillAsPaid, getPaymentHistory, BillPaymentRecord, PaymentMethod, updateBill, BillingCycle, applyRecurringDetection, persistRecurringFlags, detectRecurringPatterns, dismissAmountAlert, RecurringFrequency } from '../lib/firebase';
 import { CATEGORIES, getCategoryByValue, getSubcategory } from '../lib/categories';
@@ -332,10 +332,15 @@ export default function Dashboard() {
       <div className="px-5 pt-12 pb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shadow-sm">
-              <span className="text-teal-500 font-bold text-lg">M</span>
+            <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+              <div className="relative">
+                <Receipt className="text-white w-6 h-6" />
+                <div className="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 border border-teal-500/30">
+                  <DollarSign className="text-teal-400 w-3 h-3" />
+                </div>
+              </div>
             </div>
-            <span className="text-white font-bold text-lg tracking-tight">My<span className="text-teal-500">BillPort</span></span>
+            <span className="text-white font-bold text-xl tracking-tighter">mu<span className="text-teal-500">billport</span></span>
           </div>
           <Link href="/notifications" className="relative p-2 hover:bg-slate-800 rounded-lg transition-colors">
             <Bell className="w-6 h-6 text-slate-300" />

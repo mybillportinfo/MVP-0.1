@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Mail, Lock, Loader2, Check, X } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Loader2, Check, X, Receipt, DollarSign } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Signup() {
@@ -84,12 +84,17 @@ export default function Signup() {
 
         <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shadow-sm">
-              <span className="text-teal-500 font-bold text-xl">M</span>
+            <div className="w-12 h-12 bg-teal-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(20,184,166,0.4)]">
+              <div className="relative">
+                <Receipt className="text-white w-7 h-7" />
+                <div className="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 border border-teal-500/30">
+                  <DollarSign className="text-teal-400 w-4 h-4" />
+                </div>
+              </div>
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">Create Account</h1>
-              <p className="text-slate-400 text-sm">Join My<span className="text-teal-500">BillPort</span> today</p>
+              <p className="text-slate-400 text-sm">Join mu<span className="text-teal-500 italic">billport</span> today</p>
             </div>
           </div>
 
