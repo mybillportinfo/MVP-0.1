@@ -534,15 +534,26 @@ export async function fetchNotifications(userId: string): Promise<AppNotificatio
     const db = getFirebaseDb();
     if (!db) return [];
 
-    const q = query(
-      collection(db, "notifications"),
-      where("userId", "==", userId),
-      orderBy("createdAt", "desc"),
-      limit(50)
-    );
-    const snapshot = await getDocs(q);
+    let snapshot;
+    try {
+      const q = query(
+        collection(db, "notifications"),
+        where("userId", "==", userId),
+        orderBy("createdAt", "desc"),
+        limit(50)
+      );
+      snapshot = await getDocs(q);
+    } catch (indexError) {
+      console.warn('Notifications index query failed, using fallback:', indexError);
+      const fallbackQ = query(
+        collection(db, "notifications"),
+        where("userId", "==", userId),
+        limit(50)
+      );
+      snapshot = await getDocs(fallbackQ);
+    }
 
-    return snapshot.docs.map(d => {
+    const results = snapshot.docs.map(d => {
       const data = d.data();
       return {
         id: d.id,
@@ -555,6 +566,9 @@ export async function fetchNotifications(userId: string): Promise<AppNotificatio
         createdAt: data.createdAt?.toDate() || new Date(),
       };
     });
+
+    results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return results;
   } catch (error) {
     console.error('Firestore fetchNotifications error:', error);
     throw error;

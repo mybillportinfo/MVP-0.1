@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Home, Plus, Settings, Loader2, AlertTriangle,
   ChevronDown, X, Search, Camera, ImageIcon, FileText,
-  CheckCircle, AlertCircle, Pencil, Sparkles
+  CheckCircle, AlertCircle, Pencil, Sparkles, Receipt, DollarSign
 } from "lucide-react";
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -330,8 +330,13 @@ export default function AddBillPage() {
         </button>
             <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shadow-sm">
-              <span className="text-teal-500 font-bold text-lg">M</span>
+            <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+              <div className="relative">
+                <Receipt className="text-white w-6 h-6" />
+                <div className="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 border border-teal-500/30">
+                  <DollarSign className="text-teal-400 w-3 h-3" />
+                </div>
+              </div>
             </div>
             <span className="text-white font-bold text-lg tracking-tight">My<span className="text-teal-500">BillPort</span></span>
           </div>

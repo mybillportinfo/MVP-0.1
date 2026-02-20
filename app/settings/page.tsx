@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Home, Plus, Settings, User, Bell, Shield, Lock, LogOut, ChevronRight, Loader2, X, Eye, EyeOff, KeyRound, MessageSquare } from "lucide-react";
+import { ArrowLeft, Home, Plus, Settings, User, Bell, Shield, Lock, LogOut, ChevronRight, Loader2, X, Eye, EyeOff, KeyRound, MessageSquare, Receipt, DollarSign } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 import { getUserPreferences, setUserPreferences } from '../lib/firebase';
 
@@ -76,8 +76,13 @@ export default function SettingsPage() {
           Back to Dashboard
         </Link>
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shadow-sm">
-            <span className="text-teal-500 font-bold text-lg">M</span>
+          <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+            <div className="relative">
+              <Receipt className="text-white w-6 h-6" />
+              <div className="absolute -bottom-1 -right-1 bg-slate-900 rounded-full p-0.5 border border-teal-500/30">
+                <DollarSign className="text-teal-400 w-3 h-3" />
+              </div>
+            </div>
           </div>
           <span className="text-white font-bold text-lg tracking-tight">My<span className="text-teal-500">BillPort</span></span>
         </div>

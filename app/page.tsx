@@ -60,7 +60,7 @@ export default function LandingPage() {
               </div>
             </div>
             <span className="font-bold text-2xl tracking-tighter text-white">
-              My<span className="text-teal-500 italic">billport</span>
+              My<span className="text-teal-500">BillPort</span>
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -127,7 +127,7 @@ export default function LandingPage() {
                           <DollarSign className="text-teal-200 w-2.5 h-2.5 absolute -bottom-0.5 -right-0.5" />
                         </div>
                       </div>
-                      <span className="text-white font-bold tracking-tighter text-lg">My<span className="text-teal-500 italic">billport</span></span>
+                      <span className="text-white font-bold tracking-tighter text-lg">My<span className="text-teal-500">BillPort</span></span>
                     </div>
                     <p className="text-slate-400 text-sm">Good morning</p>
                     <p className="text-white text-xl font-semibold">Here&apos;s your overview</p>
@@ -299,7 +299,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <span className="font-bold text-2xl tracking-tighter text-white">
-                My<span className="text-teal-500 italic">billport</span>
+                My<span className="text-teal-500">BillPort</span>
               </span>
             </div>
             <div className="flex flex-wrap gap-4 text-slate-400 text-sm">

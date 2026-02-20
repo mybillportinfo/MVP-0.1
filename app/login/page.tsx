@@ -70,7 +70,7 @@ export default function Login() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">Welcome Back</h1>
-              <p className="text-slate-400 text-sm">Sign in to My<span className="text-teal-500 italic">billport</span></p>
+              <p className="text-slate-400 text-sm">Sign in to My<span className="text-teal-500">BillPort</span></p>
             </div>
           </div>
 
