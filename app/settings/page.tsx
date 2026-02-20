@@ -76,10 +76,10 @@ export default function SettingsPage() {
           Back to Dashboard
         </Link>
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center border border-teal-400/30 shadow-[0_0_10px_rgba(20,184,166,0.2)]">
-            <Sparkles className="text-white w-6 h-6" />
+          <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 shadow-sm">
+            <span className="text-teal-500 font-bold text-lg">M</span>
           </div>
-          <span className="text-white font-bold text-lg tracking-tight">My<span className="text-teal-400">BillPort</span></span>
+          <span className="text-white font-bold text-lg tracking-tight">My<span className="text-teal-500">BillPort</span></span>
         </div>
         <p className="text-slate-400">Manage your preferences</p>
       </div>
