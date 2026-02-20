@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Home, Plus, Settings, Loader2, AlertTriangle,
-  ChevronDown, X, Search, Camera, ImageIcon, FileText,
+  ChevronDown, X, Search,
   CheckCircle, AlertCircle, Pencil, Sparkles, Receipt, DollarSign
 } from "lucide-react";
 import toast from 'react-hot-toast';
@@ -22,6 +22,17 @@ import { checkForDuplicate, type DuplicateCheckResult } from '../lib/extractionG
 
 const FREE_PLAN_LIMIT = 3;
 type AddMethod = 'select' | 'search' | 'scan' | 'review';
+
+const suggestedProviders = [
+  { name: 'Toronto Hydro', slug: 'toronto-hydro' },
+  { name: 'Rogers', slug: 'rogers' },
+  { name: 'Bell', slug: 'bell' },
+  { name: 'Enbridge', slug: 'enbridge' },
+  { name: 'Hydro One', slug: 'hydro-one' },
+  { name: 'Telus', slug: 'telus' },
+  { name: 'Fido', slug: 'fido' },
+  { name: 'Shaw', slug: 'shaw' },
+];
 
 export default function AddBillPage() {
   const { user, loading: authLoading } = useAuth();
@@ -395,65 +406,51 @@ export default function AddBillPage() {
 
         {/* Method Selection */}
         {method === 'select' && !isExtracting && !extractionError && !success && !isAtLimit && (
-          <div className="space-y-3">
-            <button
-              onClick={() => setMethod('search')}
-              className="w-full bg-white rounded-xl p-5 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left"
-            >
-              <div className="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Search className="w-6 h-6 text-teal-600" />
+          <div className="space-y-6">
+            <div>
+              <p className="text-slate-400 text-sm font-medium mb-3 px-1">Suggested Providers</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {suggestedProviders.map((provider) => (
+                  <button
+                    key={provider.slug}
+                    onClick={() => {
+                      setCompanyName(provider.name);
+                      setMethod('search');
+                    }}
+                    className="bg-white border border-slate-200 rounded-xl px-4 py-4 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-teal-300 hover:text-teal-700 transition-all text-center min-h-[44px]"
+                  >
+                    {provider.name}
+                  </button>
+                ))}
               </div>
-              <div className="flex-1">
-                <p className="font-semibold text-slate-800">Search Company</p>
-                <p className="text-sm text-slate-500">Type a company name to find and add</p>
-              </div>
-            </button>
+            </div>
 
-            <button
-              onClick={() => cameraInputRef.current?.click()}
-              className="w-full bg-white rounded-xl p-5 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left"
-            >
-              <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Camera className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-slate-800">Scan from Camera</p>
-                <p className="text-sm text-slate-500">Take a photo of your bill</p>
-              </div>
-              <Sparkles className="w-5 h-5 text-amber-500" />
-            </button>
+            <div>
+              <button
+                onClick={() => setMethod('search')}
+                className="w-full bg-white border border-slate-200 rounded-xl p-5 flex items-center justify-center gap-3 hover:bg-slate-50 hover:border-teal-300 transition-all min-h-[56px]"
+              >
+                <Pencil className="w-5 h-5 text-teal-600" />
+                <span className="font-semibold text-slate-700 text-base">Add Manually</span>
+              </button>
+            </div>
 
-            <button
-              onClick={() => photoInputRef.current?.click()}
-              className="w-full bg-white rounded-xl p-5 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left"
-            >
-              <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <ImageIcon className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-slate-800">Upload Photo</p>
-                <p className="text-sm text-slate-500">Upload a bill image from your device</p>
-              </div>
-              <Sparkles className="w-5 h-5 text-amber-500" />
-            </button>
+            <div>
+              <button
+                onClick={() => {
+                  toast('Our AI agent is learning to read bills! Check back soon.', {
+                    icon: '🤖',
+                    style: { background: '#faf5ff', color: '#6b21a8', border: '1px solid #d8b4fe' },
+                  });
+                }}
+                className="w-full bg-purple-50 border-2 border-dashed border-purple-300 rounded-xl p-5 flex items-center justify-center gap-3 hover:bg-purple-100 transition-all min-h-[56px] cursor-pointer"
+              >
+                <span className="text-xl">🤖</span>
+                <span className="font-semibold text-purple-700 text-base">Bill Scanner</span>
+                <span className="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full font-medium">Agent Under Training</span>
+              </button>
+            </div>
 
-            <button
-              onClick={() => pdfInputRef.current?.click()}
-              className="w-full bg-white rounded-xl p-5 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left"
-            >
-              <div className="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <FileText className="w-6 h-6 text-red-600" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-slate-800">Upload PDF</p>
-                <p className="text-sm text-slate-500">Upload a bill PDF document</p>
-              </div>
-              <Sparkles className="w-5 h-5 text-amber-500" />
-            </button>
-
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleInputChange(e, 'camera')} />
-            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleInputChange(e, 'photo')} />
-            <input ref={pdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => handleInputChange(e, 'pdf')} />
           </div>
         )}
 
