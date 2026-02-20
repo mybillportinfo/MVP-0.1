@@ -1,16 +1,20 @@
 import { spawn } from 'child_process';
 
-const nextDev = spawn('npx', ['next', 'dev', '-p', '5000'], {
+const isProduction = process.env.NODE_ENV === 'production';
+const command = isProduction ? 'next' : 'next';
+const args = isProduction ? ['start', '-p', '5000'] : ['dev', '-p', '5000'];
+
+const nextProcess = spawn('npx', [command, ...args], {
   stdio: 'inherit',
   cwd: process.cwd(),
   shell: true
 });
 
-nextDev.on('error', (err) => {
+nextProcess.on('error', (err) => {
   console.error('Failed to start Next.js:', err);
   process.exit(1);
 });
 
-nextDev.on('close', (code) => {
+nextProcess.on('close', (code) => {
   process.exit(code || 0);
 });
