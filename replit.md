@@ -115,7 +115,7 @@ Preferred communication style: Simple, everyday language.
 - `/add-bill` - Add bill with company name, account number, due date, total amount
 - `/payment` - Payment redirect page: shows biller name + "Pay Now on [Biller] Website" button
 - `/notifications` - Notification list with type badges, mark read/mark all read
-- `/settings` - Profile, plan (3 bills free), notifications toggle, privacy/security modals
+- `/settings` - Profile, plan (5 bills free), notifications toggle, privacy/security modals
 - `/feedback` - Feedback form (category selector + message), writes to Firestore feedback collection
 - `/privacy` - Full privacy policy page (PIPEDA-compliant)
 - `/terms` - Full terms of service page
@@ -159,7 +159,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Features
 - **Bill CRUD**: Add (company name, account number, due date, amount), delete
-- **Free Plan Limit**: Maximum 3 bills per user
+- **Free Plan Limit**: Maximum 5 bills per user
 - **Biller Payment Redirect**: Single "Pay" button redirects to biller's official payment website
 - **100+ Canadian Billers**: Pre-mapped payment URLs for major utilities, telecoms, banks, insurance
 - **Google Fallback**: Unknown billers get a Google search link

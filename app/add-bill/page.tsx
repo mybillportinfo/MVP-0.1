@@ -23,7 +23,7 @@ import { checkForDuplicate, type DuplicateCheckResult } from '../lib/extractionG
 import { trackBillCreated, trackBillScanAttempt } from '../lib/analyticsService';
 import { trackBillCreation, trackFailedScan } from '../lib/securityMonitor';
 
-const FREE_PLAN_LIMIT = 3;
+const FREE_PLAN_LIMIT = 5;
 type AddMethod = 'select' | 'search' | 'scan' | 'review';
 
 

@@ -9,7 +9,7 @@ import { fetchBills, deleteBill, fetchNotifications, checkAndCreateDueDateNotifi
 import { CATEGORIES, getCategoryByValue, getSubcategory } from '../lib/categories';
 import { trackBillPaid, trackBillDeleted, trackBillEdited, trackPaymentRedirect } from '../lib/analyticsService';
 
-const FREE_PLAN_LIMIT = 3;
+const FREE_PLAN_LIMIT = 5;
 const BILLS_PER_PAGE = 10;
 
 export default function Dashboard() {

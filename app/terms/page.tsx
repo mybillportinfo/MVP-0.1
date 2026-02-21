@@ -60,7 +60,7 @@ export default function Terms() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">4. Free Plan &amp; Usage Limits</h2>
-            <p>The free plan allows you to track up to 3 bills. We may offer additional plans or features in the future. We reserve the right to modify plan limits with reasonable notice.</p>
+            <p>The free plan allows you to track up to 5 bills. We may offer additional plans or features in the future. We reserve the right to modify plan limits with reasonable notice.</p>
           </section>
 
           <section>
