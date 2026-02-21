@@ -405,8 +405,8 @@ export default function AddBillPage() {
                 <Search className="w-6 h-6 text-teal-600" />
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-slate-800">Search Company</p>
-                <p className="text-sm text-slate-500">Type a company name to find and add</p>
+                <p className="font-semibold text-slate-800">Add Bill Manually</p>
+                <p className="text-sm text-slate-500">Enter account info</p>
               </div>
             </button>
 
@@ -416,7 +416,7 @@ export default function AddBillPage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-slate-500">Scan, Upload Photo & PDF</p>
+                  <p className="font-semibold text-slate-500">Scan or Upload Bill</p>
                 </div>
                 <p className="text-sm text-slate-400">AI-powered bill scanning</p>
               </div>
