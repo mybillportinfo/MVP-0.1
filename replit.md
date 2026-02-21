@@ -3,6 +3,10 @@
 ## Overview
 BillPort is a Canadian bill management web app. Users can add bills, track them on a dashboard, and pay by being redirected to the biller's official payment website. Features Firebase Auth (email/password + Google OAuth), Firestore database, 100+ Canadian biller payment URLs, in-app notifications, and a premium fintech UI (navy/slate/muted-teal).
 
+## GitHub Repository
+- **Push URL**: https://github.com/mybillportinfo/mybillportMvp-0.1.git
+- Always push to this repo when the user asks to push to GitHub.
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
