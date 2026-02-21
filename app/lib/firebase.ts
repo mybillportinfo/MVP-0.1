@@ -34,6 +34,20 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   sendPasswordResetEmail,
+  PhoneAuthProvider,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
+  linkWithCredential,
+  unlink,
+  PhoneMultiFactorGenerator,
+  multiFactor,
+  getMultiFactorResolver,
+  MultiFactorResolver,
+  MultiFactorError,
+  fetchSignInMethodsForEmail,
+  EmailAuthProvider,
+  linkWithPopup,
 } from "firebase/auth";
 import { initializeAppCheck, ReCaptchaV3Provider, AppCheck, getToken } from "firebase/app-check";
 import { getAnalytics, logEvent, Analytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
@@ -271,6 +285,206 @@ export function resetPassword(email: string) {
   if (!auth) return Promise.reject(new Error('Firebase not available'));
   return sendPasswordResetEmail(auth, email);
 }
+
+// --- Phone Auth ---
+
+let _recaptchaVerifier: RecaptchaVerifier | null = null;
+let _confirmationResult: ConfirmationResult | null = null;
+
+export function setupRecaptchaVerifier(containerId: string): RecaptchaVerifier | null {
+  const auth = getFirebaseAuth();
+  if (!auth) return null;
+
+  if (_recaptchaVerifier) {
+    try { _recaptchaVerifier.clear(); } catch {}
+  }
+
+  _recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+    size: 'invisible',
+    callback: () => {},
+    'expired-callback': () => {},
+  });
+
+  return _recaptchaVerifier;
+}
+
+export function clearRecaptchaVerifier() {
+  if (_recaptchaVerifier) {
+    try { _recaptchaVerifier.clear(); } catch {}
+    _recaptchaVerifier = null;
+  }
+}
+
+export async function sendPhoneCode(phoneNumber: string): Promise<ConfirmationResult> {
+  const auth = getFirebaseAuth();
+  if (!auth) throw new Error('Firebase not available');
+
+  if (!_recaptchaVerifier) {
+    throw new Error('reCAPTCHA not initialized. Call setupRecaptchaVerifier first.');
+  }
+
+  _confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, _recaptchaVerifier);
+  return _confirmationResult;
+}
+
+export async function confirmPhoneCode(code: string): Promise<User> {
+  if (!_confirmationResult) {
+    throw new Error('No verification in progress. Call sendPhoneCode first.');
+  }
+
+  const result = await _confirmationResult.confirm(code);
+  _confirmationResult = null;
+  return result.user;
+}
+
+// --- Account Linking ---
+
+export async function linkPhoneToCurrentUser(phoneNumber: string): Promise<ConfirmationResult> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) throw new Error('Must be signed in to link phone');
+
+  if (!_recaptchaVerifier) {
+    throw new Error('reCAPTCHA not initialized');
+  }
+
+  const provider = new PhoneAuthProvider(auth);
+  const verificationId = await provider.verifyPhoneNumber(phoneNumber, _recaptchaVerifier);
+
+  return {
+    verificationId,
+    confirm: async (code: string) => {
+      const credential = PhoneAuthProvider.credential(verificationId, code);
+      const result = await linkWithCredential(auth.currentUser!, credential);
+      return result;
+    },
+  } as unknown as ConfirmationResult;
+}
+
+export async function unlinkPhone(): Promise<User> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) throw new Error('Must be signed in');
+  return unlink(auth.currentUser, 'phone');
+}
+
+export function getLinkedProviders(): string[] {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) return [];
+  return auth.currentUser.providerData.map(p => p.providerId);
+}
+
+export function getUserPhoneNumber(): string | null {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) return null;
+  const phoneProvider = auth.currentUser.providerData.find(p => p.providerId === 'phone');
+  return phoneProvider?.phoneNumber || null;
+}
+
+export async function getExistingSignInMethods(email: string): Promise<string[]> {
+  const auth = getFirebaseAuth();
+  if (!auth) return [];
+  try {
+    return await fetchSignInMethodsForEmail(auth, email);
+  } catch {
+    return [];
+  }
+}
+
+// --- Multi-Factor Authentication (MFA) ---
+
+export function isMfaEnrolled(): boolean {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) return false;
+  const enrolledFactors = multiFactor(auth.currentUser).enrolledFactors;
+  return enrolledFactors.length > 0;
+}
+
+export function getMfaEnrolledFactors(): { uid: string; displayName: string | null; factorId: string }[] {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) return [];
+  return multiFactor(auth.currentUser).enrolledFactors.map(f => ({
+    uid: f.uid,
+    displayName: f.displayName || null,
+    factorId: f.factorId as string,
+  }));
+}
+
+export async function startMfaEnrollment(phoneNumber: string): Promise<string> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) throw new Error('Must be signed in');
+
+  if (!_recaptchaVerifier) {
+    throw new Error('reCAPTCHA not initialized');
+  }
+
+  const session = await multiFactor(auth.currentUser).getSession();
+  const phoneInfoOptions = {
+    phoneNumber,
+    session,
+  };
+
+  const phoneAuthProvider = new PhoneAuthProvider(auth);
+  const verificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, _recaptchaVerifier);
+  return verificationId;
+}
+
+export async function completeMfaEnrollment(verificationId: string, code: string, displayName?: string): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) throw new Error('Must be signed in');
+
+  const credential = PhoneAuthProvider.credential(verificationId, code);
+  const assertion = PhoneMultiFactorGenerator.assertion(credential);
+  await multiFactor(auth.currentUser).enroll(assertion, displayName || 'Phone');
+}
+
+export async function unenrollMfa(factorUid: string): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) throw new Error('Must be signed in');
+
+  const enrolledFactors = multiFactor(auth.currentUser).enrolledFactors;
+  const factor = enrolledFactors.find(f => f.uid === factorUid);
+  if (!factor) throw new Error('Factor not found');
+
+  await multiFactor(auth.currentUser).unenroll(factor);
+}
+
+export function isMfaError(error: any): error is MultiFactorError {
+  return error?.code === 'auth/multi-factor-auth-required';
+}
+
+export function getMfaResolver(error: MultiFactorError): MultiFactorResolver {
+  const auth = getFirebaseAuth();
+  if (!auth) throw new Error('Firebase not available');
+  return getMultiFactorResolver(auth, error);
+}
+
+export async function sendMfaVerificationCode(resolver: MultiFactorResolver): Promise<string> {
+  const auth = getFirebaseAuth();
+  if (!auth) throw new Error('Firebase not available');
+
+  if (!_recaptchaVerifier) {
+    throw new Error('reCAPTCHA not initialized');
+  }
+
+  const phoneHint = resolver.hints.find(h => h.factorId === PhoneMultiFactorGenerator.FACTOR_ID);
+  if (!phoneHint) throw new Error('No phone factor found');
+
+  const phoneInfoOptions = {
+    multiFactorHint: phoneHint,
+    session: resolver.session,
+  };
+
+  const phoneAuthProvider = new PhoneAuthProvider(auth);
+  return phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, _recaptchaVerifier);
+}
+
+export async function completeMfaSignIn(resolver: MultiFactorResolver, verificationId: string, code: string): Promise<User> {
+  const credential = PhoneAuthProvider.credential(verificationId, code);
+  const assertion = PhoneMultiFactorGenerator.assertion(credential);
+  const result = await resolver.resolveSignIn(assertion);
+  return result.user;
+}
+
+export type { User, ConfirmationResult, MultiFactorResolver };
 
 // --- Bill CRUD ---
 
@@ -1202,5 +1416,3 @@ export async function submitFeedback(
 
   return docRef.id;
 }
-
-export type { User };

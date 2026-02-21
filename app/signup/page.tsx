@@ -1,19 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Mail, Lock, Loader2, Check, X, Receipt, DollarSign } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Loader2, Check, X, Receipt, DollarSign, Phone, ArrowRight } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
+import { setupRecaptchaVerifier, clearRecaptchaVerifier } from '../lib/firebase';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+
+type AuthTab = 'email' | 'phone';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState<string | undefined>('');
+  const [otp, setOtp] = useState('');
+  const [activeTab, setActiveTab] = useState<AuthTab>('email');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const { user, signup, loginWithGoogle, error, clearError } = useAuth();
+  const recaptchaRef = useRef<boolean>(false);
+
+  const { user, signup, loginWithGoogle, loginWithPhone, confirmPhone, error, clearError, phoneCodeSent } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -21,6 +32,20 @@ export default function Signup() {
       router.push('/app');
     }
   }, [user, router]);
+
+  useEffect(() => {
+    if (!recaptchaRef.current && typeof window !== 'undefined') {
+      const container = document.getElementById('recaptcha-container-signup');
+      if (container) {
+        setupRecaptchaVerifier('recaptcha-container-signup');
+        recaptchaRef.current = true;
+      }
+    }
+    return () => {
+      clearRecaptchaVerifier();
+      recaptchaRef.current = false;
+    };
+  }, []);
 
   const passwordChecks = {
     length: password.length >= 6,
@@ -35,12 +60,10 @@ export default function Signup() {
       setLocalError('Please fill in all fields');
       return;
     }
-
     if (password !== confirmPassword) {
       setLocalError('Passwords do not match');
       return;
     }
-
     if (password.length < 6) {
       setLocalError('Password must be at least 6 characters');
       return;
@@ -48,7 +71,6 @@ export default function Signup() {
 
     setIsSubmitting(true);
     clearError();
-
     try {
       await signup(email, password);
       router.push('/app');
@@ -71,8 +93,36 @@ export default function Signup() {
     }
   };
 
+  const handleSendPhoneCode = async () => {
+    if (!phoneNumber) return;
+    setIsSendingCode(true);
+    setLocalError(null);
+    clearError();
+    try {
+      await loginWithPhone(phoneNumber);
+    } catch {
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleConfirmPhone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp || otp.length < 6) return;
+    setIsSubmitting(true);
+    setLocalError(null);
+    clearError();
+    try {
+      await confirmPhone(otp);
+      router.push('/app');
+    } catch {
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const displayError = localError || error;
-  const isLoading = isSubmitting || isGoogleLoading;
+  const isLoading = isSubmitting || isGoogleLoading || isSendingCode;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex items-center justify-center px-4">
@@ -129,96 +179,205 @@ export default function Signup() {
               <div className="w-full border-t border-slate-700" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="bg-slate-800/50 px-4 text-slate-500">or sign up with email</span>
+              <span className="bg-slate-800/50 px-4 text-slate-500">or sign up with</span>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a password"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Confirm Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm your password"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  required
-                />
-              </div>
-            </div>
-
-            {password && (
-              <div className="bg-slate-700/30 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  {passwordChecks.length ? (
-                    <Check className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <X className="w-4 h-4 text-slate-500" />
-                  )}
-                  <span className={passwordChecks.length ? 'text-green-400' : 'text-slate-400'}>
-                    At least 6 characters
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  {passwordChecks.match ? (
-                    <Check className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <X className="w-4 h-4 text-slate-500" />
-                  )}
-                  <span className={passwordChecks.match ? 'text-green-400' : 'text-slate-400'}>
-                    Passwords match
-                  </span>
-                </div>
-              </div>
-            )}
-
+          <div className="flex bg-slate-700/50 rounded-lg p-1 mb-6">
             <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              onClick={() => { setActiveTab('email'); setLocalError(null); clearError(); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${
+                activeTab === 'email'
+                  ? 'bg-slate-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                'Create Account'
-              )}
+              <Mail className="w-4 h-4" />
+              Email
             </button>
-          </form>
+            <button
+              onClick={() => { setActiveTab('phone'); setLocalError(null); clearError(); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${
+                activeTab === 'phone'
+                  ? 'bg-slate-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              <Phone className="w-4 h-4" />
+              Phone
+            </button>
+          </div>
+
+          {activeTab === 'email' && (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create a password"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Confirm Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              {password && (
+                <div className="bg-slate-700/30 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    {passwordChecks.length ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <X className="w-4 h-4 text-slate-500" />
+                    )}
+                    <span className={passwordChecks.length ? 'text-green-400' : 'text-slate-400'}>
+                      At least 6 characters
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    {passwordChecks.match ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <X className="w-4 h-4 text-slate-500" />
+                    )}
+                    <span className={passwordChecks.match ? 'text-green-400' : 'text-slate-400'}>
+                      Passwords match
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'phone' && !phoneCodeSent && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Phone Number</label>
+                <div className="phone-input-dark">
+                  <PhoneInput
+                    international
+                    defaultCountry="CA"
+                    value={phoneNumber}
+                    onChange={setPhoneNumber}
+                    placeholder="Enter phone number"
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleSendPhoneCode}
+                disabled={isLoading || !phoneNumber}
+                className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSendingCode ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Sending code...
+                  </>
+                ) : (
+                  <>
+                    Send Verification Code
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'phone' && phoneCodeSent && (
+            <form onSubmit={handleConfirmPhone} className="space-y-4">
+              <div className="bg-teal-500/10 border border-teal-500/30 text-teal-300 px-4 py-3 rounded-lg text-sm text-center">
+                Code sent to {phoneNumber}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Verification Code</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Enter 6-digit code"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 text-center text-2xl tracking-[0.3em] font-mono"
+                  autoFocus
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || otp.length < 6}
+                className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Verify & Create Account'
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setLocalError(null); clearError(); handleSendPhoneCode(); }}
+                disabled={isSendingCode}
+                className="w-full text-sm text-teal-500 hover:underline"
+              >
+                Resend code
+              </button>
+            </form>
+          )}
 
           <p className="text-center text-slate-400 mt-6 text-sm">
             Already have an account?{' '}
@@ -227,6 +386,8 @@ export default function Signup() {
             </Link>
           </p>
         </div>
+
+        <div id="recaptcha-container-signup" />
       </div>
     </div>
   );

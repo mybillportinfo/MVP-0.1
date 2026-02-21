@@ -185,6 +185,56 @@
   line-height: 1.6;
 }
 
+/* Phone Input Dark Theme */
+.phone-input-dark .PhoneInput {
+  background: transparent;
+}
+.phone-input-dark .PhoneInputInput {
+  background: transparent !important;
+  color: white !important;
+  border: none !important;
+  outline: none !important;
+  font-size: 1rem;
+}
+.phone-input-dark .PhoneInputInput::placeholder {
+  color: rgb(148 163 184) !important;
+}
+.phone-input-dark .PhoneInputCountry {
+  margin-right: 8px;
+}
+.phone-input-dark .PhoneInputCountrySelect {
+  background: rgb(51 65 85) !important;
+  color: white !important;
+  border: none;
+}
+.phone-input-dark .PhoneInputCountryIcon--border {
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Phone Input Light Theme (for white modals) */
+.phone-input-light .PhoneInput {
+  background: transparent;
+}
+.phone-input-light .PhoneInputInput {
+  background: transparent !important;
+  color: rgb(30 41 59) !important;
+  border: none !important;
+  outline: none !important;
+  font-size: 1rem;
+}
+.phone-input-light .PhoneInputInput::placeholder {
+  color: rgb(148 163 184) !important;
+}
+.phone-input-light .PhoneInputCountry {
+  margin-right: 8px;
+}
+.phone-input-light .PhoneInputCountrySelect {
+  background: white !important;
+  color: rgb(30 41 59) !important;
+  border: none;
+}
+
 /* Focus States */
 :focus-visible {
   outline: 2px solid var(--ring);

@@ -10,7 +10,21 @@ BillPort is a Canadian bill management web app. Users can add bills, track them 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (February 19, 2026)
+## Recent Changes (February 21, 2026)
+- ✅ Multi-Factor Authentication (MFA/2FA): SMS-based two-factor authentication via Firebase
+- ✅ Phone sign-in: separate tab on login/signup pages for phone number + OTP authentication
+- ✅ MFA challenge screen: dedicated purple-themed UI for entering 2FA code during login
+- ✅ MFA enrollment: Settings → Security → Enable 2FA with phone number verification
+- ✅ MFA unenrollment: Settings → Security → Disable 2FA with confirmation dialog
+- ✅ Phone account linking: Settings → Security → Add/Remove Phone Number
+- ✅ RecaptchaVerifier: invisible reCAPTCHA for phone auth (separate from App Check reCAPTCHA v3)
+- ✅ 11 Firebase helpers in firebase.ts: phone sign-in, account linking, MFA enrollment/unenrollment/sign-in
+- ✅ AuthContext: MFA state management, phone auth methods, MFA verification flows
+- ✅ Security settings modal: shows linked providers, phone number, 2FA status, sign-in methods
+- ✅ Phone input: react-phone-number-input with CA default, dark+light theme CSS
+- ✅ Error handling: auth error messages for phone/MFA errors, requires-recent-login guidance
+
+## Previous Changes (February 19, 2026)
 - ✅ Smart Add Bill: 4 input methods (Search Company, Camera Scan, Upload Photo, Upload PDF)
 - ✅ AI-powered bill extraction: Claude Vision (claude-sonnet-4-5) analyzes bill images/PDFs
 - ✅ API route `/api/extract-bill`: accepts base64 image/PDF, returns structured bill data (runtime="nodejs" for Vercel)
@@ -93,7 +107,7 @@ Preferred communication style: Simple, everyday language.
 - ✅ In-app notification system with Firestore backend
 - ✅ Notifications page with mark-as-read, mark-all-read, type-specific badges
 - ✅ Bell icon with unread badge on dashboard
-- ✅ Auth: Email/password + Google Sign-In only (no phone, no Apple)
+- ✅ Auth: Email/password + Google Sign-In + Phone Sign-In + MFA/2FA
 - ✅ Forgot Password flow
 - ✅ Firestore rules: per-user data isolation
 
@@ -187,5 +201,5 @@ Preferred communication style: Simple, everyday language.
 
 ## Firebase Configuration
 - **Project ID**: mybillport-8e05a
-- **Auth Methods**: Email/password, Google OAuth
+- **Auth Methods**: Email/password, Google OAuth, Phone Sign-In, SMS MFA/2FA
 - **Environment Variables**: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID
