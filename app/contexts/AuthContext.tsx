@@ -18,6 +18,7 @@ import {
   completeMfaSignIn,
   MultiFactorResolver,
 } from '../lib/firebase';
+import { getAdditionalUserInfo } from 'firebase/auth';
 import { trackUserLogin, trackUserSignup } from '../lib/analyticsService';
 
 interface MfaState {
@@ -88,8 +89,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     setLoading(true);
     try {
-      await registerUser(email, password);
+      const newUser = await registerUser(email, password);
       trackUserSignup('email');
+      try {
+        await fetch('/api/send-welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, displayName: newUser.displayName || undefined }),
+        });
+      } catch {}
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Signup failed';
       setError(getAuthErrorMessage(message));
@@ -103,8 +111,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     setLoading(true);
     try {
-      await signInWithGoogle();
-      trackUserLogin('google');
+      const credential = await signInWithGoogle();
+      const additionalInfo = getAdditionalUserInfo(credential);
+      const isNewUser = additionalInfo?.isNewUser ?? false;
+      const googleUser = credential.user;
+      if (isNewUser) {
+        try {
+          await fetch('/api/send-welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: googleUser.email, displayName: googleUser.displayName || undefined }),
+          });
+        } catch {}
+        trackUserSignup('google');
+      } else {
+        trackUserLogin('google');
+      }
     } catch (err: unknown) {
       if (isMfaError(err)) {
         const resolver = getMfaResolver(err);

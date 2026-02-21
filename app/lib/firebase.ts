@@ -48,6 +48,7 @@ import {
   fetchSignInMethodsForEmail,
   EmailAuthProvider,
   linkWithPopup,
+  getAdditionalUserInfo,
 } from "firebase/auth";
 import { initializeAppCheck, ReCaptchaV3Provider, AppCheck, getToken } from "firebase/app-check";
 import { getAnalytics, logEvent, Analytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
@@ -277,7 +278,7 @@ export function signInWithGoogle() {
   const auth = getFirebaseAuth();
   if (!auth) return Promise.reject(new Error('Firebase not available'));
   const provider = new GoogleAuthProvider();
-  return signInWithPopup(auth, provider).then(r => r.user);
+  return signInWithPopup(auth, provider);
 }
 
 export function resetPassword(email: string) {
@@ -289,7 +290,21 @@ export function resetPassword(email: string) {
 // --- Phone Auth ---
 
 let _recaptchaVerifier: RecaptchaVerifier | null = null;
+let _recaptchaContainerId: string | null = null;
 let _confirmationResult: ConfirmationResult | null = null;
+
+function createFreshVerifier(auth: Auth, containerId: string): RecaptchaVerifier {
+  return new RecaptchaVerifier(auth, containerId, {
+    size: 'invisible',
+    callback: () => {},
+    'expired-callback': () => {
+      if (_recaptchaVerifier) {
+        try { _recaptchaVerifier.clear(); } catch {}
+        _recaptchaVerifier = null;
+      }
+    },
+  });
+}
 
 export function setupRecaptchaVerifier(containerId: string): RecaptchaVerifier | null {
   const auth = getFirebaseAuth();
@@ -297,14 +312,11 @@ export function setupRecaptchaVerifier(containerId: string): RecaptchaVerifier |
 
   if (_recaptchaVerifier) {
     try { _recaptchaVerifier.clear(); } catch {}
+    _recaptchaVerifier = null;
   }
 
-  _recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
-    size: 'invisible',
-    callback: () => {},
-    'expired-callback': () => {},
-  });
-
+  _recaptchaContainerId = containerId;
+  _recaptchaVerifier = createFreshVerifier(auth, containerId);
   return _recaptchaVerifier;
 }
 
@@ -313,18 +325,47 @@ export function clearRecaptchaVerifier() {
     try { _recaptchaVerifier.clear(); } catch {}
     _recaptchaVerifier = null;
   }
+  _recaptchaContainerId = null;
+}
+
+function ensureRecaptchaVerifier(): RecaptchaVerifier {
+  const auth = getFirebaseAuth();
+  if (!auth) throw new Error('Firebase not available');
+
+  if (_recaptchaVerifier) return _recaptchaVerifier;
+
+  if (_recaptchaContainerId) {
+    const container = document.getElementById(_recaptchaContainerId);
+    if (container) {
+      _recaptchaVerifier = createFreshVerifier(auth, _recaptchaContainerId);
+      return _recaptchaVerifier;
+    }
+  }
+
+  throw new Error('reCAPTCHA not initialized. Please refresh the page and try again.');
 }
 
 export async function sendPhoneCode(phoneNumber: string): Promise<ConfirmationResult> {
   const auth = getFirebaseAuth();
   if (!auth) throw new Error('Firebase not available');
 
-  if (!_recaptchaVerifier) {
-    throw new Error('reCAPTCHA not initialized. Call setupRecaptchaVerifier first.');
-  }
+  const verifier = ensureRecaptchaVerifier();
 
-  _confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, _recaptchaVerifier);
-  return _confirmationResult;
+  try {
+    _confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
+    return _confirmationResult;
+  } catch (err: any) {
+    if (err?.code === 'auth/internal-error' || err?.code === 'auth/argument-error') {
+      if (_recaptchaVerifier) {
+        try { _recaptchaVerifier.clear(); } catch {}
+        _recaptchaVerifier = null;
+      }
+      const freshVerifier = ensureRecaptchaVerifier();
+      _confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, freshVerifier);
+      return _confirmationResult;
+    }
+    throw err;
+  }
 }
 
 export async function confirmPhoneCode(code: string): Promise<User> {
@@ -343,12 +384,21 @@ export async function linkPhoneToCurrentUser(phoneNumber: string): Promise<Confi
   const auth = getFirebaseAuth();
   if (!auth?.currentUser) throw new Error('Must be signed in to link phone');
 
-  if (!_recaptchaVerifier) {
-    throw new Error('reCAPTCHA not initialized');
-  }
+  const verifier = ensureRecaptchaVerifier();
 
   const provider = new PhoneAuthProvider(auth);
-  const verificationId = await provider.verifyPhoneNumber(phoneNumber, _recaptchaVerifier);
+  let verificationId: string;
+  try {
+    verificationId = await provider.verifyPhoneNumber(phoneNumber, verifier);
+  } catch (err: any) {
+    if (err?.code === 'auth/internal-error' || err?.code === 'auth/argument-error') {
+      if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch {} _recaptchaVerifier = null; }
+      const freshVerifier = ensureRecaptchaVerifier();
+      verificationId = await provider.verifyPhoneNumber(phoneNumber, freshVerifier);
+    } else {
+      throw err;
+    }
+  }
 
   return {
     verificationId,
@@ -412,9 +462,7 @@ export async function startMfaEnrollment(phoneNumber: string): Promise<string> {
   const auth = getFirebaseAuth();
   if (!auth?.currentUser) throw new Error('Must be signed in');
 
-  if (!_recaptchaVerifier) {
-    throw new Error('reCAPTCHA not initialized');
-  }
+  const verifier = ensureRecaptchaVerifier();
 
   const session = await multiFactor(auth.currentUser).getSession();
   const phoneInfoOptions = {
@@ -423,8 +471,16 @@ export async function startMfaEnrollment(phoneNumber: string): Promise<string> {
   };
 
   const phoneAuthProvider = new PhoneAuthProvider(auth);
-  const verificationId = await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, _recaptchaVerifier);
-  return verificationId;
+  try {
+    return await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, verifier);
+  } catch (err: any) {
+    if (err?.code === 'auth/internal-error' || err?.code === 'auth/argument-error') {
+      if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch {} _recaptchaVerifier = null; }
+      const freshVerifier = ensureRecaptchaVerifier();
+      return await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, freshVerifier);
+    }
+    throw err;
+  }
 }
 
 export async function completeMfaEnrollment(verificationId: string, code: string, displayName?: string): Promise<void> {
@@ -461,9 +517,7 @@ export async function sendMfaVerificationCode(resolver: MultiFactorResolver): Pr
   const auth = getFirebaseAuth();
   if (!auth) throw new Error('Firebase not available');
 
-  if (!_recaptchaVerifier) {
-    throw new Error('reCAPTCHA not initialized');
-  }
+  const verifier = ensureRecaptchaVerifier();
 
   const phoneHint = resolver.hints.find(h => h.factorId === PhoneMultiFactorGenerator.FACTOR_ID);
   if (!phoneHint) throw new Error('No phone factor found');
@@ -474,7 +528,16 @@ export async function sendMfaVerificationCode(resolver: MultiFactorResolver): Pr
   };
 
   const phoneAuthProvider = new PhoneAuthProvider(auth);
-  return phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, _recaptchaVerifier);
+  try {
+    return await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, verifier);
+  } catch (err: any) {
+    if (err?.code === 'auth/internal-error' || err?.code === 'auth/argument-error') {
+      if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch {} _recaptchaVerifier = null; }
+      const freshVerifier = ensureRecaptchaVerifier();
+      return await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, freshVerifier);
+    }
+    throw err;
+  }
 }
 
 export async function completeMfaSignIn(resolver: MultiFactorResolver, verificationId: string, code: string): Promise<User> {
