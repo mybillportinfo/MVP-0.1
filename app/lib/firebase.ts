@@ -34,20 +34,6 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   sendPasswordResetEmail,
-  PhoneAuthProvider,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  ConfirmationResult,
-  linkWithCredential,
-  unlink,
-  PhoneMultiFactorGenerator,
-  multiFactor,
-  getMultiFactorResolver,
-  MultiFactorResolver,
-  MultiFactorError,
-  fetchSignInMethodsForEmail,
-  EmailAuthProvider,
-  linkWithPopup,
   getAdditionalUserInfo,
 } from "firebase/auth";
 import { initializeAppCheck, ReCaptchaV3Provider, AppCheck, getToken } from "firebase/app-check";
@@ -240,6 +226,15 @@ export interface BillPaymentRecord {
 
 export interface UserPreferences {
   inAppReminders: boolean;
+  notifyDays: number[];
+}
+
+export interface UserProfile {
+  userId: string;
+  username: string;
+  email: string;
+  photoURL: string | null;
+  updatedAt?: any;
 }
 
 // --- Auth functions ---
@@ -287,134 +282,7 @@ export function resetPassword(email: string) {
   return sendPasswordResetEmail(auth, email);
 }
 
-// --- Phone Auth ---
-
-let _recaptchaVerifier: RecaptchaVerifier | null = null;
-let _recaptchaContainerId: string | null = null;
-let _confirmationResult: ConfirmationResult | null = null;
-
-function createFreshVerifier(auth: Auth, containerId: string): RecaptchaVerifier {
-  return new RecaptchaVerifier(auth, containerId, {
-    size: 'invisible',
-    callback: () => {},
-    'expired-callback': () => {
-      if (_recaptchaVerifier) {
-        try { _recaptchaVerifier.clear(); } catch {}
-        _recaptchaVerifier = null;
-      }
-    },
-  });
-}
-
-export function setupRecaptchaVerifier(containerId: string): RecaptchaVerifier | null {
-  const auth = getFirebaseAuth();
-  if (!auth) return null;
-
-  if (_recaptchaVerifier) {
-    try { _recaptchaVerifier.clear(); } catch {}
-    _recaptchaVerifier = null;
-  }
-
-  _recaptchaContainerId = containerId;
-  _recaptchaVerifier = createFreshVerifier(auth, containerId);
-  return _recaptchaVerifier;
-}
-
-export function clearRecaptchaVerifier() {
-  if (_recaptchaVerifier) {
-    try { _recaptchaVerifier.clear(); } catch {}
-    _recaptchaVerifier = null;
-  }
-  _recaptchaContainerId = null;
-}
-
-function ensureRecaptchaVerifier(): RecaptchaVerifier {
-  const auth = getFirebaseAuth();
-  if (!auth) throw new Error('Firebase not available');
-
-  if (_recaptchaVerifier) return _recaptchaVerifier;
-
-  if (_recaptchaContainerId) {
-    const container = document.getElementById(_recaptchaContainerId);
-    if (container) {
-      _recaptchaVerifier = createFreshVerifier(auth, _recaptchaContainerId);
-      return _recaptchaVerifier;
-    }
-  }
-
-  throw new Error('reCAPTCHA not initialized. Please refresh the page and try again.');
-}
-
-export async function sendPhoneCode(phoneNumber: string): Promise<ConfirmationResult> {
-  const auth = getFirebaseAuth();
-  if (!auth) throw new Error('Firebase not available');
-
-  const verifier = ensureRecaptchaVerifier();
-
-  try {
-    _confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
-    return _confirmationResult;
-  } catch (err: any) {
-    if (err?.code === 'auth/internal-error' || err?.code === 'auth/argument-error') {
-      if (_recaptchaVerifier) {
-        try { _recaptchaVerifier.clear(); } catch {}
-        _recaptchaVerifier = null;
-      }
-      const freshVerifier = ensureRecaptchaVerifier();
-      _confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, freshVerifier);
-      return _confirmationResult;
-    }
-    throw err;
-  }
-}
-
-export async function confirmPhoneCode(code: string): Promise<User> {
-  if (!_confirmationResult) {
-    throw new Error('No verification in progress. Call sendPhoneCode first.');
-  }
-
-  const result = await _confirmationResult.confirm(code);
-  _confirmationResult = null;
-  return result.user;
-}
-
-// --- Account Linking ---
-
-export async function linkPhoneToCurrentUser(phoneNumber: string): Promise<ConfirmationResult> {
-  const auth = getFirebaseAuth();
-  if (!auth?.currentUser) throw new Error('Must be signed in to link phone');
-
-  const verifier = ensureRecaptchaVerifier();
-
-  const provider = new PhoneAuthProvider(auth);
-  let verificationId: string;
-  try {
-    verificationId = await provider.verifyPhoneNumber(phoneNumber, verifier);
-  } catch (err: any) {
-    if (err?.code === 'auth/internal-error' || err?.code === 'auth/argument-error') {
-      if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch {} _recaptchaVerifier = null; }
-      const freshVerifier = ensureRecaptchaVerifier();
-      verificationId = await provider.verifyPhoneNumber(phoneNumber, freshVerifier);
-    } else {
-      throw err;
-    }
-  }
-
-  return {
-    verificationId,
-    confirm: async (code: string) => {
-      const credential = PhoneAuthProvider.credential(verificationId, code);
-      const result = await linkWithCredential(auth.currentUser!, credential);
-      return result;
-    },
-  } as unknown as ConfirmationResult;
-}
-
-export async function unlinkPhone(): Promise<User> {
-  const auth = getFirebaseAuth();
-  if (!auth?.currentUser) throw new Error('Must be signed in');
-  return unlink(auth.currentUser, 'phone');
-}
+// --- Account Info ---
 
 export function getLinkedProviders(): string[] {
   const auth = getFirebaseAuth();
@@ -422,132 +290,90 @@ export function getLinkedProviders(): string[] {
   return auth.currentUser.providerData.map(p => p.providerId);
 }
 
-export function getUserPhoneNumber(): string | null {
-  const auth = getFirebaseAuth();
-  if (!auth?.currentUser) return null;
-  const phoneProvider = auth.currentUser.providerData.find(p => p.providerId === 'phone');
-  return phoneProvider?.phoneNumber || null;
-}
+// --- MFA Error Detection ---
 
-export async function getExistingSignInMethods(email: string): Promise<string[]> {
-  const auth = getFirebaseAuth();
-  if (!auth) return [];
-  try {
-    return await fetchSignInMethodsForEmail(auth, email);
-  } catch {
-    return [];
-  }
-}
-
-// --- Multi-Factor Authentication (MFA) ---
-
-export function isMfaEnrolled(): boolean {
-  const auth = getFirebaseAuth();
-  if (!auth?.currentUser) return false;
-  const enrolledFactors = multiFactor(auth.currentUser).enrolledFactors;
-  return enrolledFactors.length > 0;
-}
-
-export function getMfaEnrolledFactors(): { uid: string; displayName: string | null; factorId: string }[] {
-  const auth = getFirebaseAuth();
-  if (!auth?.currentUser) return [];
-  return multiFactor(auth.currentUser).enrolledFactors.map(f => ({
-    uid: f.uid,
-    displayName: f.displayName || null,
-    factorId: f.factorId as string,
-  }));
-}
-
-export async function startMfaEnrollment(phoneNumber: string): Promise<string> {
-  const auth = getFirebaseAuth();
-  if (!auth?.currentUser) throw new Error('Must be signed in');
-
-  const verifier = ensureRecaptchaVerifier();
-
-  const session = await multiFactor(auth.currentUser).getSession();
-  const phoneInfoOptions = {
-    phoneNumber,
-    session,
-  };
-
-  const phoneAuthProvider = new PhoneAuthProvider(auth);
-  try {
-    return await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, verifier);
-  } catch (err: any) {
-    if (err?.code === 'auth/internal-error' || err?.code === 'auth/argument-error') {
-      if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch {} _recaptchaVerifier = null; }
-      const freshVerifier = ensureRecaptchaVerifier();
-      return await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, freshVerifier);
-    }
-    throw err;
-  }
-}
-
-export async function completeMfaEnrollment(verificationId: string, code: string, displayName?: string): Promise<void> {
-  const auth = getFirebaseAuth();
-  if (!auth?.currentUser) throw new Error('Must be signed in');
-
-  const credential = PhoneAuthProvider.credential(verificationId, code);
-  const assertion = PhoneMultiFactorGenerator.assertion(credential);
-  await multiFactor(auth.currentUser).enroll(assertion, displayName || 'Phone');
-}
-
-export async function unenrollMfa(factorUid: string): Promise<void> {
-  const auth = getFirebaseAuth();
-  if (!auth?.currentUser) throw new Error('Must be signed in');
-
-  const enrolledFactors = multiFactor(auth.currentUser).enrolledFactors;
-  const factor = enrolledFactors.find(f => f.uid === factorUid);
-  if (!factor) throw new Error('Factor not found');
-
-  await multiFactor(auth.currentUser).unenroll(factor);
-}
-
-export function isMfaError(error: any): error is MultiFactorError {
+export function isMfaError(error: any): boolean {
   return error?.code === 'auth/multi-factor-auth-required';
 }
 
-export function getMfaResolver(error: MultiFactorError): MultiFactorResolver {
-  const auth = getFirebaseAuth();
-  if (!auth) throw new Error('Firebase not available');
-  return getMultiFactorResolver(auth, error);
-}
+// --- User Profile ---
 
-export async function sendMfaVerificationCode(resolver: MultiFactorResolver): Promise<string> {
-  const auth = getFirebaseAuth();
-  if (!auth) throw new Error('Firebase not available');
-
-  const verifier = ensureRecaptchaVerifier();
-
-  const phoneHint = resolver.hints.find(h => h.factorId === PhoneMultiFactorGenerator.FACTOR_ID);
-  if (!phoneHint) throw new Error('No phone factor found');
-
-  const phoneInfoOptions = {
-    multiFactorHint: phoneHint,
-    session: resolver.session,
-  };
-
-  const phoneAuthProvider = new PhoneAuthProvider(auth);
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   try {
-    return await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, verifier);
-  } catch (err: any) {
-    if (err?.code === 'auth/internal-error' || err?.code === 'auth/argument-error') {
-      if (_recaptchaVerifier) { try { _recaptchaVerifier.clear(); } catch {} _recaptchaVerifier = null; }
-      const freshVerifier = ensureRecaptchaVerifier();
-      return await phoneAuthProvider.verifyPhoneNumber(phoneInfoOptions, freshVerifier);
+    const db = getFirebaseDb();
+    if (!db) return null;
+    const docSnap = await getDoc(doc(db, "userProfiles", userId));
+    if (docSnap.exists()) {
+      return docSnap.data() as UserProfile;
     }
-    throw err;
+    return null;
+  } catch {
+    return null;
   }
 }
 
-export async function completeMfaSignIn(resolver: MultiFactorResolver, verificationId: string, code: string): Promise<User> {
-  const credential = PhoneAuthProvider.credential(verificationId, code);
-  const assertion = PhoneMultiFactorGenerator.assertion(credential);
-  const result = await resolver.resolveSignIn(assertion);
-  return result.user;
+export async function saveUserProfile(userId: string, profile: Partial<UserProfile>): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) throw new Error('Must be signed in');
+  const db = getFirebaseDb();
+  if (!db) throw new Error('Firebase not available');
+  await setDoc(doc(db, "userProfiles", userId), {
+    ...profile,
+    userId,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
 }
 
-export type { User, ConfirmationResult, MultiFactorResolver };
+export async function updateUserEmail(newEmail: string): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) throw new Error('Must be signed in');
+  const { updateEmail } = await import('firebase/auth');
+  await updateEmail(auth.currentUser, newEmail);
+}
+
+export async function updateUserDisplayName(displayName: string): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) throw new Error('Must be signed in');
+  const { updateProfile } = await import('firebase/auth');
+  await updateProfile(auth.currentUser, { displayName });
+}
+
+export async function updateUserProfilePhoto(photoURL: string | null): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) throw new Error('Must be signed in');
+  const { updateProfile } = await import('firebase/auth');
+  await updateProfile(auth.currentUser, { photoURL });
+}
+
+export async function deleteUserAccount(): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) throw new Error('Must be signed in');
+
+  const userId = auth.currentUser.uid;
+  const db = getFirebaseDb();
+
+  if (db) {
+    try {
+      const billsQuery = query(collection(db, "bills"), where("userId", "==", userId));
+      const billSnap = await getDocs(billsQuery);
+      const batch = writeBatch(db);
+      billSnap.docs.forEach(d => batch.delete(d.ref));
+
+      const notifsQuery = query(collection(db, "notifications"), where("userId", "==", userId));
+      const notifsSnap = await getDocs(notifsQuery);
+      notifsSnap.docs.forEach(d => batch.delete(d.ref));
+
+      batch.delete(doc(db, "userPreferences", userId));
+      batch.delete(doc(db, "userProfiles", userId));
+
+      await batch.commit();
+    } catch {}
+  }
+
+  await auth.currentUser.delete();
+}
+
+export type { User };
 
 // --- Bill CRUD ---
 
@@ -956,26 +782,32 @@ export async function markAllNotificationsRead(userId: string) {
 
 // --- User preferences ---
 
+const DEFAULT_NOTIFY_DAYS = [7, 2, 1, 0];
+
 export async function getUserPreferences(userId: string): Promise<UserPreferences> {
   try {
     const auth = getFirebaseAuth();
-    if (!auth) return { inAppReminders: true };
+    if (!auth) return { inAppReminders: true, notifyDays: DEFAULT_NOTIFY_DAYS };
     const currentUser = auth.currentUser;
-    if (!currentUser) return { inAppReminders: true };
+    if (!currentUser) return { inAppReminders: true, notifyDays: DEFAULT_NOTIFY_DAYS };
 
     await currentUser.getIdToken(true);
     const db = getFirebaseDb();
-    if (!db) return { inAppReminders: true };
+    if (!db) return { inAppReminders: true, notifyDays: DEFAULT_NOTIFY_DAYS };
 
     const docSnap = await getDoc(doc(db, "userPreferences", userId));
     if (docSnap.exists()) {
       const data = docSnap.data();
-      return { inAppReminders: data.inAppReminders !== false };
+      const notifyDays = Array.isArray(data.notifyDays) ? data.notifyDays : DEFAULT_NOTIFY_DAYS;
+      return {
+        inAppReminders: data.inAppReminders !== false,
+        notifyDays,
+      };
     }
-    return { inAppReminders: true };
+    return { inAppReminders: true, notifyDays: DEFAULT_NOTIFY_DAYS };
   } catch (error) {
     console.error('Error fetching user preferences:', error);
-    return { inAppReminders: true };
+    return { inAppReminders: true, notifyDays: DEFAULT_NOTIFY_DAYS };
   }
 }
 
@@ -1035,6 +867,7 @@ export async function checkAndCreateDueDateNotifications(userId: string, bills: 
   const prefs = await getUserPreferences(userId);
   if (!prefs.inAppReminders) return;
 
+  const notifyDays = prefs.notifyDays || [7, 2, 1, 0];
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
@@ -1054,22 +887,20 @@ export async function checkAndCreateDueDateNotifications(userId: string, bills: 
       type = "overdue";
       title = "Bill Overdue";
       message = `"${bill.companyName}" ($${bill.totalAmount.toFixed(2)}) is ${Math.abs(daysUntil)} day${Math.abs(daysUntil) === 1 ? '' : 's'} overdue.`;
-    } else if (daysUntil === 0) {
-      type = "due_today";
-      title = "Bill Due Today";
-      message = `"${bill.companyName}" ($${bill.totalAmount.toFixed(2)}) is due today.`;
-    } else if (daysUntil === 1) {
-      type = "due_soon";
-      title = "Bill Due Tomorrow";
-      message = `"${bill.companyName}" ($${bill.totalAmount.toFixed(2)}) is due tomorrow.`;
-    } else if (daysUntil <= 3 && daysUntil > 1) {
-      type = "due_soon";
-      title = "Bill Due Soon";
-      message = `"${bill.companyName}" ($${bill.totalAmount.toFixed(2)}) is due in ${daysUntil} days.`;
-    } else if (daysUntil === 7) {
-      type = "due_soon";
-      title = "Bill Due in 7 Days";
-      message = `"${bill.companyName}" ($${bill.totalAmount.toFixed(2)}) is due in 7 days.`;
+    } else if (notifyDays.includes(daysUntil)) {
+      if (daysUntil === 0) {
+        type = "due_today";
+        title = "Bill Due Today";
+        message = `"${bill.companyName}" ($${bill.totalAmount.toFixed(2)}) is due today.`;
+      } else if (daysUntil === 1) {
+        type = "due_soon";
+        title = "Bill Due Tomorrow";
+        message = `"${bill.companyName}" ($${bill.totalAmount.toFixed(2)}) is due tomorrow.`;
+      } else {
+        type = "due_soon";
+        title = `Bill Due in ${daysUntil} Days`;
+        message = `"${bill.companyName}" ($${bill.totalAmount.toFixed(2)}) is due in ${daysUntil} days.`;
+      }
     }
 
     if (type && bill.id) {

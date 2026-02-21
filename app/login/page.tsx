@@ -1,34 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Mail, Lock, Loader2, Receipt, DollarSign, Phone, Shield, ArrowRight } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Loader2, Receipt, DollarSign } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
-import { setupRecaptchaVerifier, clearRecaptchaVerifier } from '../lib/firebase';
-import PhoneInput from 'react-phone-number-input';
-import 'react-phone-number-input/style.css';
-
-type AuthTab = 'email' | 'phone';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState<string | undefined>('');
-  const [otp, setOtp] = useState('');
-  const [mfaCode, setMfaCode] = useState('');
-  const [activeTab, setActiveTab] = useState<AuthTab>('email');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isSendingCode, setIsSendingCode] = useState(false);
-  const [isMfaLoading, setIsMfaLoading] = useState(false);
-  const recaptchaRef = useRef<boolean>(false);
 
-  const {
-    user, login, loginWithGoogle, loginWithPhone, confirmPhone,
-    error, clearError, mfaState, initMfaVerification, completeMfa, cancelMfa,
-    phoneCodeSent,
-  } = useAuth();
+  const { user, login, loginWithGoogle, error, clearError } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -36,27 +20,6 @@ export default function Login() {
       router.push('/app');
     }
   }, [user, router]);
-
-  useEffect(() => {
-    if (!recaptchaRef.current && typeof window !== 'undefined') {
-      const container = document.getElementById('recaptcha-container');
-      if (container) {
-        setupRecaptchaVerifier('recaptcha-container');
-        recaptchaRef.current = true;
-      }
-    }
-    return () => {
-      clearRecaptchaVerifier();
-      recaptchaRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (mfaState && !mfaState.verificationId) {
-      setIsMfaLoading(true);
-      initMfaVerification().catch(() => {}).finally(() => setIsMfaLoading(false));
-    }
-  }, [mfaState]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,123 +47,7 @@ export default function Login() {
     }
   };
 
-  const handleSendPhoneCode = async () => {
-    if (!phoneNumber) return;
-    setIsSendingCode(true);
-    clearError();
-    try {
-      await loginWithPhone(phoneNumber);
-    } catch {
-    } finally {
-      setIsSendingCode(false);
-    }
-  };
-
-  const handleConfirmPhone = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otp || otp.length < 6) return;
-    setIsSubmitting(true);
-    clearError();
-    try {
-      await confirmPhone(otp);
-      router.push('/app');
-    } catch {
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleMfaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mfaCode || mfaCode.length < 6) return;
-    setIsMfaLoading(true);
-    clearError();
-    try {
-      await completeMfa(mfaCode);
-      router.push('/app');
-    } catch {
-    } finally {
-      setIsMfaLoading(false);
-    }
-  };
-
-  const isLoading = isSubmitting || isGoogleLoading || isSendingCode;
-
-  if (mfaState) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex items-center justify-center px-4">
-        <div className="w-full max-w-md">
-          <button onClick={cancelMfa} className="flex items-center text-slate-400 hover:text-white mb-8 transition-colors">
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Sign In
-          </button>
-
-          <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.4)]">
-                <Shield className="text-white w-7 h-7" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">Two-Factor Authentication</h1>
-                <p className="text-slate-400 text-sm">Enter the code sent to your phone</p>
-              </div>
-            </div>
-
-            {mfaState.phoneHint && (
-              <div className="bg-slate-700/50 rounded-lg p-3 mb-6 text-sm text-slate-300 text-center">
-                Code sent to {mfaState.phoneHint}
-              </div>
-            )}
-
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm">
-                {error}
-              </div>
-            )}
-
-            {!mfaState.verificationId && isMfaLoading ? (
-              <div className="flex flex-col items-center gap-3 py-8">
-                <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
-                <p className="text-slate-400 text-sm">Sending verification code...</p>
-              </div>
-            ) : (
-              <form onSubmit={handleMfaSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Verification Code</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={mfaCode}
-                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Enter 6-digit code"
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-2xl tracking-[0.3em] font-mono"
-                    autoFocus
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isMfaLoading || mfaCode.length < 6}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
-                >
-                  {isMfaLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Verifying...
-                    </>
-                  ) : (
-                    'Verify & Sign In'
-                  )}
-                </button>
-              </form>
-            )}
-          </div>
-          <div id="recaptcha-container" />
-        </div>
-      </div>
-    );
-  }
+  const isLoading = isSubmitting || isGoogleLoading;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 flex items-center justify-center px-4">
@@ -257,170 +104,61 @@ export default function Login() {
               <div className="w-full border-t border-slate-700" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="bg-slate-800/50 px-4 text-slate-500">or continue with</span>
+              <span className="bg-slate-800/50 px-4 text-slate-500">or continue with email</span>
             </div>
           </div>
 
-          <div className="flex bg-slate-700/50 rounded-lg p-1 mb-6">
-            <button
-              onClick={() => { setActiveTab('email'); clearError(); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${
-                activeTab === 'email'
-                  ? 'bg-slate-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              <Mail className="w-4 h-4" />
-              Email
-            </button>
-            <button
-              onClick={() => { setActiveTab('phone'); clearError(); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md text-sm font-medium transition-all ${
-                activeTab === 'phone'
-                  ? 'bg-slate-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              <Phone className="w-4 h-4" />
-              Phone
-            </button>
-          </div>
-
-          {activeTab === 'email' && (
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-slate-300">Password</label>
-                  <Link href="/forgot-password" className="text-sm text-teal-500 hover:underline">
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign In'
-                )}
-              </button>
-            </form>
-          )}
-
-          {activeTab === 'phone' && !phoneCodeSent && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Phone Number</label>
-                <div className="phone-input-dark">
-                  <PhoneInput
-                    international
-                    defaultCountry="CA"
-                    value={phoneNumber}
-                    onChange={setPhoneNumber}
-                    placeholder="Enter phone number"
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={handleSendPhoneCode}
-                disabled={isLoading || !phoneNumber}
-                className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isSendingCode ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Sending code...
-                  </>
-                ) : (
-                  <>
-                    Send Verification Code
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-
-          {activeTab === 'phone' && phoneCodeSent && (
-            <form onSubmit={handleConfirmPhone} className="space-y-4">
-              <div className="bg-teal-500/10 border border-teal-500/30 text-teal-300 px-4 py-3 rounded-lg text-sm text-center">
-                Code sent to {phoneNumber}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Verification Code</label>
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Enter 6-digit code"
-                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 text-center text-2xl tracking-[0.3em] font-mono"
-                  autoFocus
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  required
                 />
               </div>
+            </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting || otp.length < 6}
-                className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  'Verify & Sign In'
-                )}
-              </button>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-300">Password</label>
+                <Link href="/forgot-password" className="text-sm text-teal-500 hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  required
+                />
+              </div>
+            </div>
 
-              <button
-                type="button"
-                onClick={() => { clearError(); handleSendPhoneCode(); }}
-                disabled={isSendingCode}
-                className="w-full text-sm text-teal-500 hover:underline"
-              >
-                Resend code
-              </button>
-            </form>
-          )}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
 
           <p className="text-center text-slate-400 mt-6 text-sm">
             Don&apos;t have an account?{' '}
@@ -429,8 +167,6 @@ export default function Login() {
             </Link>
           </p>
         </div>
-
-        <div id="recaptcha-container" />
       </div>
     </div>
   );

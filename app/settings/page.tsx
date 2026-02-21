@@ -3,48 +3,42 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Home, Plus, Settings, User, Bell, Shield, Lock, LogOut, ChevronRight, Loader2, X, Eye, EyeOff, KeyRound, MessageSquare, Receipt, DollarSign, Phone, ShieldCheck, ShieldOff, Check, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Home, Plus, Settings, User, Bell, Shield, Lock, LogOut, ChevronRight, Loader2, X, Eye, EyeOff, MessageSquare, Receipt, DollarSign, Check, AlertTriangle, Camera, Trash2, Mail } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 import {
   getUserPreferences, setUserPreferences,
-  setupRecaptchaVerifier, clearRecaptchaVerifier,
-  getLinkedProviders, getUserPhoneNumber,
-  linkPhoneToCurrentUser, unlinkPhone,
-  isMfaEnrolled, getMfaEnrolledFactors,
-  startMfaEnrollment, completeMfaEnrollment, unenrollMfa,
+  getLinkedProviders,
+  getUserProfile, saveUserProfile,
+  updateUserDisplayName, updateUserProfilePhoto,
+  updateUserEmail, deleteUserAccount,
+  type UserProfile,
 } from '../lib/firebase';
-import PhoneInput from 'react-phone-number-input';
-import 'react-phone-number-input/style.css';
 
-type SettingsModal = 'notifications' | 'privacy' | 'security' | null;
-type SecurityView = 'main' | 'link-phone' | 'enroll-mfa' | 'unenroll-mfa';
+type SettingsModal = 'notifications' | 'privacy' | 'security' | 'profile' | null;
 
 export default function SettingsPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [activeModal, setActiveModal] = useState<SettingsModal>(null);
-  const [securityView, setSecurityView] = useState<SecurityView>('main');
 
+  const [notifyDays, setNotifyDays] = useState<number[]>([7, 2, 1, 0]);
   const [inAppReminders, setInAppReminders] = useState(true);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [prefsSaved, setPrefsSaved] = useState(false);
   const [loadingPrefs, setLoadingPrefs] = useState(true);
 
   const [linkedProviders, setLinkedProviders] = useState<string[]>([]);
-  const [linkedPhone, setLinkedPhone] = useState<string | null>(null);
-  const [mfaEnabled, setMfaEnabled] = useState(false);
-  const [mfaFactors, setMfaFactors] = useState<{ uid: string; displayName: string | null; factorId: string }[]>([]);
 
-  const [phoneNumber, setPhoneNumber] = useState<string | undefined>('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [mfaVerificationId, setMfaVerificationId] = useState<string | null>(null);
-  const [phoneConfirmation, setPhoneConfirmation] = useState<any>(null);
-  const [securityLoading, setSecurityLoading] = useState(false);
-  const [securityError, setSecurityError] = useState<string | null>(null);
-  const [securitySuccess, setSecuritySuccess] = useState<string | null>(null);
-  const [codeSent, setCodeSent] = useState(false);
-
-  const recaptchaInitialized = useRef(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [username, setUsername] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -57,50 +51,136 @@ export default function SettingsPage() {
       setLoadingPrefs(true);
       getUserPreferences(user.uid).then(prefs => {
         setInAppReminders(prefs.inAppReminders);
-      }).catch(console.error).finally(() => {
+        setNotifyDays(prefs.notifyDays || [7, 2, 1, 0]);
+      }).catch(() => {}).finally(() => {
         setLoadingPrefs(false);
       });
 
-      refreshSecurityInfo();
+      setLinkedProviders(getLinkedProviders());
+
+      getUserProfile(user.uid).then(p => {
+        if (p) {
+          setProfile(p);
+          setUsername(p.username || '');
+        } else {
+          setUsername(user.displayName || '');
+        }
+        setNewEmail(user.email || '');
+      });
     }
   }, [user]);
-
-  const refreshSecurityInfo = () => {
-    setLinkedProviders(getLinkedProviders());
-    setLinkedPhone(getUserPhoneNumber());
-    setMfaEnabled(isMfaEnrolled());
-    setMfaFactors(getMfaEnrolledFactors());
-  };
-
-  const initRecaptcha = () => {
-    if (!recaptchaInitialized.current) {
-      setTimeout(() => {
-        const container = document.getElementById('recaptcha-settings');
-        if (container) {
-          setupRecaptchaVerifier('recaptcha-settings');
-          recaptchaInitialized.current = true;
-        }
-      }, 100);
-    }
-  };
-
-  const cleanupRecaptcha = () => {
-    clearRecaptchaVerifier();
-    recaptchaInitialized.current = false;
-  };
 
   const handleSavePreferences = async () => {
     if (!user) return;
     setSavingPrefs(true);
     setPrefsSaved(false);
     try {
-      await setUserPreferences(user.uid, { inAppReminders });
+      await setUserPreferences(user.uid, { inAppReminders, notifyDays });
       setPrefsSaved(true);
       setTimeout(() => setPrefsSaved(false), 2000);
-    } catch (err) {
-      console.error('Failed to save preferences:', err);
+    } catch {
     } finally {
       setSavingPrefs(false);
+    }
+  };
+
+  const toggleNotifyDay = (day: number) => {
+    setNotifyDays(prev =>
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort((a, b) => b - a)
+    );
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setSavingProfile(true);
+    setProfileError(null);
+    setProfileSaved(false);
+    try {
+      if (username.trim()) {
+        await updateUserDisplayName(username.trim());
+      }
+      await saveUserProfile(user.uid, {
+        username: username.trim(),
+        email: user.email || '',
+        photoURL: user.photoURL || null,
+      });
+      if (newEmail && newEmail !== user.email) {
+        try {
+          await updateUserEmail(newEmail);
+        } catch (err: any) {
+          const msg = err.message || '';
+          if (msg.includes('requires-recent-login')) {
+            setProfileError('For security, please sign out and sign back in before changing your email.');
+          } else {
+            setProfileError('Failed to update email. ' + msg);
+          }
+          setSavingProfile(false);
+          return;
+        }
+      }
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2000);
+    } catch (err: any) {
+      setProfileError(err.message || 'Failed to save profile');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setProfileError('Photo must be under 2MB');
+      return;
+    }
+
+    setSavingProfile(true);
+    setProfileError(null);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        await updateUserProfilePhoto(dataUrl);
+        await saveUserProfile(user.uid, { photoURL: dataUrl });
+        setProfile(prev => prev ? { ...prev, photoURL: dataUrl } : null);
+        setSavingProfile(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setProfileError('Failed to upload photo');
+      setSavingProfile(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!user) return;
+    setSavingProfile(true);
+    try {
+      await updateUserProfilePhoto(null);
+      await saveUserProfile(user.uid, { photoURL: null });
+      setProfile(prev => prev ? { ...prev, photoURL: null } : null);
+    } catch {
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE' || !user) return;
+    setDeletingAccount(true);
+    try {
+      await deleteUserAccount();
+      router.push('/');
+    } catch (err: any) {
+      const msg = err.message || '';
+      if (msg.includes('requires-recent-login')) {
+        setProfileError('For security, please sign out and sign back in before deleting your account.');
+      } else {
+        setProfileError('Failed to delete account. ' + msg);
+      }
+      setDeletingAccount(false);
     }
   };
 
@@ -108,152 +188,7 @@ export default function SettingsPage() {
     try {
       await logout();
       router.push('/');
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
-  };
-
-  const handleLinkPhone = () => {
-    setSecurityView('link-phone');
-    setPhoneNumber('');
-    setVerificationCode('');
-    setCodeSent(false);
-    setSecurityError(null);
-    setSecuritySuccess(null);
-    initRecaptcha();
-  };
-
-  const handleSendLinkCode = async () => {
-    if (!phoneNumber) return;
-    setSecurityLoading(true);
-    setSecurityError(null);
-    try {
-      const confirmation = await linkPhoneToCurrentUser(phoneNumber);
-      setPhoneConfirmation(confirmation);
-      setCodeSent(true);
-    } catch (err: any) {
-      setSecurityError(err.message || 'Failed to send verification code');
-    } finally {
-      setSecurityLoading(false);
-    }
-  };
-
-  const handleConfirmLinkCode = async () => {
-    if (!phoneConfirmation || !verificationCode) return;
-    setSecurityLoading(true);
-    setSecurityError(null);
-    try {
-      await phoneConfirmation.confirm(verificationCode);
-      setSecuritySuccess('Phone number linked successfully!');
-      refreshSecurityInfo();
-      setTimeout(() => {
-        setSecurityView('main');
-        setSecuritySuccess(null);
-        cleanupRecaptcha();
-      }, 1500);
-    } catch (err: any) {
-      setSecurityError(err.message || 'Invalid verification code');
-    } finally {
-      setSecurityLoading(false);
-    }
-  };
-
-  const handleUnlinkPhone = async () => {
-    setSecurityLoading(true);
-    setSecurityError(null);
-    try {
-      await unlinkPhone();
-      setSecuritySuccess('Phone number removed');
-      refreshSecurityInfo();
-      setTimeout(() => setSecuritySuccess(null), 2000);
-    } catch (err: any) {
-      setSecurityError(err.message || 'Failed to remove phone');
-    } finally {
-      setSecurityLoading(false);
-    }
-  };
-
-  const handleStartMfaEnroll = () => {
-    setSecurityView('enroll-mfa');
-    setPhoneNumber(linkedPhone || '');
-    setVerificationCode('');
-    setCodeSent(false);
-    setMfaVerificationId(null);
-    setSecurityError(null);
-    setSecuritySuccess(null);
-    initRecaptcha();
-  };
-
-  const handleSendMfaCode = async () => {
-    if (!phoneNumber) return;
-    setSecurityLoading(true);
-    setSecurityError(null);
-    try {
-      const verificationId = await startMfaEnrollment(phoneNumber);
-      setMfaVerificationId(verificationId);
-      setCodeSent(true);
-    } catch (err: any) {
-      const msg = err.message || 'Failed to send code';
-      if (msg.includes('requires-recent-login')) {
-        setSecurityError('For security, please sign out and sign back in before enabling 2FA.');
-      } else {
-        setSecurityError(msg);
-      }
-    } finally {
-      setSecurityLoading(false);
-    }
-  };
-
-  const handleConfirmMfaEnroll = async () => {
-    if (!mfaVerificationId || !verificationCode) return;
-    setSecurityLoading(true);
-    setSecurityError(null);
-    try {
-      await completeMfaEnrollment(mfaVerificationId, verificationCode, 'Phone');
-      setSecuritySuccess('Two-factor authentication enabled!');
-      refreshSecurityInfo();
-      setTimeout(() => {
-        setSecurityView('main');
-        setSecuritySuccess(null);
-        cleanupRecaptcha();
-      }, 1500);
-    } catch (err: any) {
-      setSecurityError(err.message || 'Invalid verification code');
-    } finally {
-      setSecurityLoading(false);
-    }
-  };
-
-  const handleUnenrollMfa = async () => {
-    if (mfaFactors.length === 0) return;
-    setSecurityLoading(true);
-    setSecurityError(null);
-    try {
-      await unenrollMfa(mfaFactors[0].uid);
-      setSecuritySuccess('Two-factor authentication disabled');
-      refreshSecurityInfo();
-      setTimeout(() => {
-        setSecurityView('main');
-        setSecuritySuccess(null);
-      }, 1500);
-    } catch (err: any) {
-      const msg = err.message || 'Failed to disable 2FA';
-      if (msg.includes('requires-recent-login')) {
-        setSecurityError('For security, please sign out and sign back in before disabling 2FA.');
-      } else {
-        setSecurityError(msg);
-      }
-    } finally {
-      setSecurityLoading(false);
-    }
-  };
-
-  const closeSecurityModal = () => {
-    setActiveModal(null);
-    setSecurityView('main');
-    setSecurityError(null);
-    setSecuritySuccess(null);
-    cleanupRecaptcha();
+    } catch {}
   };
 
   if (loading || !user) {
@@ -263,6 +198,8 @@ export default function SettingsPage() {
       </div>
     );
   }
+
+  const photoURL = profile?.photoURL || user.photoURL;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800 pb-24">
@@ -286,25 +223,27 @@ export default function SettingsPage() {
       </div>
 
       <div className="px-4 space-y-4">
-        <div className="bg-white rounded-xl overflow-hidden">
+        <button
+          onClick={() => { setActiveModal('profile'); setProfileError(null); setProfileSaved(false); setShowDeleteConfirm(false); }}
+          className="w-full bg-white rounded-xl overflow-hidden hover:bg-slate-50 transition-colors"
+        >
           <div className="p-4 flex items-center gap-4">
-            <div className="w-14 h-14 bg-teal-100 rounded-full flex items-center justify-center">
-              <User className="w-7 h-7 text-teal-600" />
-            </div>
-            <div className="flex-1">
+            {photoURL ? (
+              <img src={photoURL} alt="Profile" className="w-14 h-14 rounded-full object-cover border-2 border-teal-200" />
+            ) : (
+              <div className="w-14 h-14 bg-teal-100 rounded-full flex items-center justify-center">
+                <User className="w-7 h-7 text-teal-600" />
+              </div>
+            )}
+            <div className="flex-1 text-left">
               <p className="font-semibold text-slate-800">
-                {user.displayName || 'MyBillPort User'}
+                {username || user.displayName || 'MyBillPort User'}
               </p>
               <p className="text-sm text-slate-500">{user.email}</p>
-              {linkedPhone && (
-                <p className="text-sm text-slate-500 flex items-center gap-1">
-                  <Phone className="w-3 h-3" />
-                  {linkedPhone}
-                </p>
-              )}
             </div>
+            <ChevronRight className="w-5 h-5 text-slate-400" />
           </div>
-        </div>
+        </button>
 
         <div className="bg-white rounded-xl p-4">
           <div className="flex items-center justify-between">
@@ -336,17 +275,12 @@ export default function SettingsPage() {
             <ChevronRight className="w-5 h-5 text-slate-400" />
           </button>
           <button
-            onClick={() => { setActiveModal('security'); refreshSecurityInfo(); }}
+            onClick={() => setActiveModal('security')}
             className="w-full p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors"
           >
             <Lock className="w-5 h-5 text-slate-500" />
             <span className="flex-1 text-left text-slate-800">Security</span>
-            <div className="flex items-center gap-2">
-              {mfaEnabled && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">2FA On</span>
-              )}
-              <ChevronRight className="w-5 h-5 text-slate-400" />
-            </div>
+            <ChevronRight className="w-5 h-5 text-slate-400" />
           </button>
         </div>
 
@@ -395,8 +329,155 @@ export default function SettingsPage() {
       </nav>
 
       {activeModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+          onKeyDown={(e) => { if (e.key === 'Escape') setActiveModal(null); }}
+        >
           <div className="bg-white rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto">
+
+            {activeModal === 'profile' && (
+              <div>
+                <div className="flex items-center justify-between p-5 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                      <User className="w-5 h-5 text-teal-600" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-slate-800">Profile</h2>
+                  </div>
+                  <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                </div>
+                <div className="p-5 space-y-5">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="relative">
+                      {photoURL ? (
+                        <img src={photoURL} alt="Profile" className="w-20 h-20 rounded-full object-cover border-2 border-teal-200" />
+                      ) : (
+                        <div className="w-20 h-20 bg-teal-100 rounded-full flex items-center justify-center">
+                          <User className="w-10 h-10 text-teal-600" />
+                        </div>
+                      )}
+                      <button
+                        onClick={() => photoInputRef.current?.click()}
+                        className="absolute -bottom-1 -right-1 w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center shadow-lg hover:bg-teal-600 transition-colors"
+                      >
+                        <Camera className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoUpload}
+                    />
+                    {photoURL && (
+                      <button onClick={handleRemovePhoto} className="text-sm text-red-500 hover:text-red-600">
+                        Remove photo
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Enter your username"
+                      className="w-full px-4 py-3 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Changing email requires recent sign-in</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Sign-in Methods</label>
+                    <div className="flex gap-2">
+                      {linkedProviders.includes('password') && (
+                        <span className="text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-full">Email/Password</span>
+                      )}
+                      {linkedProviders.includes('google.com') && (
+                        <span className="text-xs bg-blue-100 text-blue-600 px-3 py-1 rounded-full">Google</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {profileError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      {profileError}
+                    </div>
+                  )}
+
+                  {profileSaved && (
+                    <div className="bg-teal-50 border border-teal-200 text-teal-700 px-4 py-2 rounded-lg text-sm text-center flex items-center justify-center gap-2">
+                      <Check className="w-4 h-4" />
+                      Profile saved!
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={savingProfile}
+                    className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {savingProfile ? (<><Loader2 className="w-5 h-5 animate-spin" />Saving...</>) : 'Save Profile'}
+                  </button>
+
+                  <div className="border-t border-slate-200 pt-5">
+                    <h3 className="text-sm font-semibold text-red-600 mb-2">Danger Zone</h3>
+                    {!showDeleteConfirm ? (
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="w-full py-3 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Account
+                      </button>
+                    ) : (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+                        <p className="text-sm text-red-700">This will permanently delete your account and all your data. Type <strong>DELETE</strong> to confirm.</p>
+                        <input
+                          type="text"
+                          value={deleteConfirmText}
+                          onChange={(e) => setDeleteConfirmText(e.target.value)}
+                          placeholder='Type "DELETE"'
+                          className="w-full px-3 py-2 border border-red-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}
+                            className="flex-1 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleDeleteAccount}
+                            disabled={deleteConfirmText !== 'DELETE' || deletingAccount}
+                            className="flex-1 py-2 bg-red-600 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                            {deletingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeModal === 'notifications' && (
               <div>
                 <div className="flex items-center justify-between p-5 border-b border-slate-100">
@@ -433,17 +514,30 @@ export default function SettingsPage() {
                         </button>
                       </div>
 
-                      <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-                        <p className="text-sm font-medium text-slate-700">When enabled, you receive notifications for:</p>
-                        <ul className="text-sm text-slate-600 space-y-1.5">
-                          <li className="flex items-center gap-2"><span className="text-teal-500">&#10003;</span>New bills added</li>
-                          <li className="flex items-center gap-2"><span className="text-teal-500">&#10003;</span>Bills due in 7 days</li>
-                          <li className="flex items-center gap-2"><span className="text-teal-500">&#10003;</span>Bills due in 3 days</li>
-                          <li className="flex items-center gap-2"><span className="text-teal-500">&#10003;</span>Bills due tomorrow</li>
-                          <li className="flex items-center gap-2"><span className="text-teal-500">&#10003;</span>Bills due today</li>
-                          <li className="flex items-center gap-2"><span className="text-teal-500">&#10003;</span>Overdue bills</li>
-                        </ul>
-                      </div>
+                      {inAppReminders && (
+                        <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                          <p className="text-sm font-medium text-slate-700">Notify me before a bill is due:</p>
+                          {[
+                            { day: 7, label: '7 days before' },
+                            { day: 2, label: '2 days before' },
+                            { day: 1, label: '1 day before' },
+                            { day: 0, label: 'Same day (due today)' },
+                          ].map(({ day, label }) => (
+                            <label key={day} className="flex items-center gap-3 cursor-pointer">
+                              <div
+                                onClick={() => toggleNotifyDay(day)}
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors cursor-pointer ${
+                                  notifyDays.includes(day) ? 'bg-teal-500 border-teal-500' : 'border-slate-300 bg-white'
+                                }`}
+                              >
+                                {notifyDays.includes(day) && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <span className="text-sm text-slate-700">{label}</span>
+                            </label>
+                          ))}
+                          <p className="text-xs text-slate-500 mt-2">Overdue bills always generate notifications</p>
+                        </div>
+                      )}
 
                       {prefsSaved && (
                         <div className="bg-teal-50 border border-teal-200 text-teal-700 px-4 py-2 rounded-lg text-sm text-center">
@@ -524,322 +618,65 @@ export default function SettingsPage() {
               <div>
                 <div className="flex items-center justify-between p-5 border-b border-slate-100">
                   <div className="flex items-center gap-3">
-                    {securityView !== 'main' && (
-                      <button
-                        onClick={() => { setSecurityView('main'); setSecurityError(null); setSecuritySuccess(null); cleanupRecaptcha(); }}
-                        className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
-                      >
-                        <ArrowLeft className="w-5 h-5 text-slate-500" />
-                      </button>
-                    )}
                     <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                       <Lock className="w-5 h-5 text-purple-600" />
                     </div>
-                    <h2 className="text-lg font-semibold text-slate-800">
-                      {securityView === 'main' && 'Security'}
-                      {securityView === 'link-phone' && 'Link Phone'}
-                      {securityView === 'enroll-mfa' && 'Enable 2FA'}
-                      {securityView === 'unenroll-mfa' && 'Disable 2FA'}
-                    </h2>
+                    <h2 className="text-lg font-semibold text-slate-800">Security</h2>
                   </div>
-                  <button onClick={closeSecurityModal} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                  <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                     <X className="w-5 h-5 text-slate-500" />
                   </button>
                 </div>
-
                 <div className="p-5 space-y-5">
-                  {securityError && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                      {securityError}
-                    </div>
-                  )}
-
-                  {securitySuccess && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-                      <Check className="w-4 h-4" />
-                      {securitySuccess}
-                    </div>
-                  )}
-
-                  {securityView === 'main' && (
-                    <>
-                      <div className={`flex items-center gap-3 p-3 rounded-lg border ${mfaEnabled ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
-                        {mfaEnabled ? <ShieldCheck className="w-5 h-5 text-green-600" /> : <Shield className="w-5 h-5 text-slate-400" />}
-                        <div>
-                          <p className={`font-medium ${mfaEnabled ? 'text-green-800' : 'text-slate-800'}`}>
-                            {mfaEnabled ? 'Account Extra Secured' : 'Account Secured'}
-                          </p>
-                          <p className={`text-sm ${mfaEnabled ? 'text-green-600' : 'text-slate-500'}`}>
-                            {mfaEnabled ? 'Two-factor authentication is active' : 'Protected with Firebase Auth'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <h3 className="font-medium text-slate-800">Sign-in Methods</h3>
-
-                        {linkedProviders.includes('password') && (
-                          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                            <KeyRound className="w-5 h-5 text-slate-400" />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-slate-700">Email & Password</p>
-                              <p className="text-xs text-slate-500">{user.email}</p>
-                            </div>
-                            <span className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded-full font-medium">Active</span>
-                          </div>
-                        )}
-
-                        {linkedProviders.includes('google.com') && (
-                          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                            <svg className="w-5 h-5" viewBox="0 0 24 24">
-                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                            </svg>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-slate-700">Google Account</p>
-                              <p className="text-xs text-slate-500">{user.email}</p>
-                            </div>
-                            <span className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded-full font-medium">Active</span>
-                          </div>
-                        )}
-
-                        {linkedPhone ? (
-                          <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                            <Phone className="w-5 h-5 text-slate-400" />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-slate-700">Phone Number</p>
-                              <p className="text-xs text-slate-500">{linkedPhone}</p>
-                            </div>
-                            <button
-                              onClick={handleUnlinkPhone}
-                              disabled={securityLoading || linkedProviders.length <= 1}
-                              className="text-xs text-red-500 hover:text-red-700 font-medium disabled:opacity-50"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={handleLinkPhone}
-                            className="w-full flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                          >
-                            <Phone className="w-5 h-5 text-teal-500" />
-                            <span className="flex-1 text-left text-sm font-medium text-teal-700">Add Phone Number</span>
-                            <ChevronRight className="w-4 h-4 text-slate-400" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="space-y-3">
-                        <h3 className="font-medium text-slate-800">Two-Factor Authentication</h3>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-5 h-5 text-slate-400" />
+                      <div>
+                        <p className="font-medium text-slate-800">Email Verification</p>
                         <p className="text-sm text-slate-500">
-                          Add an extra layer of security. When enabled, you&apos;ll need to enter a code from your phone each time you sign in.
+                          {user.emailVerified ? 'Your email is verified' : 'Email not verified'}
                         </p>
-
-                        {mfaEnabled ? (
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                              <ShieldCheck className="w-5 h-5 text-green-600" />
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-green-800">2FA is Active</p>
-                                <p className="text-xs text-green-600">
-                                  {mfaFactors[0]?.displayName || 'Phone'} enrolled
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => setSecurityView('unenroll-mfa')}
-                              className="w-full py-2.5 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
-                            >
-                              Disable Two-Factor Authentication
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={handleStartMfaEnroll}
-                            className="w-full py-3 bg-purple-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-purple-700 transition-colors"
-                          >
-                            <ShieldCheck className="w-5 h-5" />
-                            Enable Two-Factor Authentication
-                          </button>
-                        )}
-                      </div>
-
-                      {!linkedProviders.includes('google.com') && linkedProviders.includes('password') && (
-                        <Link
-                          href="/forgot-password"
-                          onClick={closeSecurityModal}
-                          className="block w-full text-center py-3 border border-slate-200 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition-colors"
-                        >
-                          Change Password
-                        </Link>
-                      )}
-
-                      <div className="bg-slate-50 rounded-lg p-4 space-y-3">
-                        <h3 className="font-medium text-slate-800">Security Features</h3>
-                        <ul className="text-sm text-slate-600 space-y-2">
-                          <li className="flex items-start gap-2"><span className="text-teal-500 mt-0.5">&#10003;</span>Encrypted data transmission (TLS/SSL)</li>
-                          <li className="flex items-start gap-2"><span className="text-teal-500 mt-0.5">&#10003;</span>Per-user data isolation in Firestore</li>
-                          <li className="flex items-start gap-2"><span className="text-teal-500 mt-0.5">&#10003;</span>Secure session management</li>
-                          {mfaEnabled && (
-                            <li className="flex items-start gap-2"><span className="text-purple-500 mt-0.5">&#10003;</span>Two-factor authentication (SMS)</li>
-                          )}
-                        </ul>
-                      </div>
-                    </>
-                  )}
-
-                  {securityView === 'link-phone' && (
-                    <>
-                      {!codeSent ? (
-                        <div className="space-y-4">
-                          <p className="text-sm text-slate-600">
-                            Link a phone number to your account so you can sign in with it.
-                          </p>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Phone Number</label>
-                            <div className="phone-input-light">
-                              <PhoneInput
-                                international
-                                defaultCountry="CA"
-                                value={phoneNumber}
-                                onChange={setPhoneNumber}
-                                placeholder="Enter phone number"
-                                className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                              />
-                            </div>
-                          </div>
-                          <button
-                            onClick={handleSendLinkCode}
-                            disabled={securityLoading || !phoneNumber}
-                            className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-                          >
-                            {securityLoading ? (<><Loader2 className="w-5 h-5 animate-spin" />Sending code...</>) : 'Send Verification Code'}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="bg-teal-50 border border-teal-200 text-teal-700 px-4 py-3 rounded-lg text-sm text-center">
-                            Code sent to {phoneNumber}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Verification Code</label>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              maxLength={6}
-                              value={verificationCode}
-                              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                              placeholder="Enter 6-digit code"
-                              className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 text-center text-2xl tracking-[0.3em] font-mono"
-                              autoFocus
-                            />
-                          </div>
-                          <button
-                            onClick={handleConfirmLinkCode}
-                            disabled={securityLoading || verificationCode.length < 6}
-                            className="w-full btn-accent py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-                          >
-                            {securityLoading ? (<><Loader2 className="w-5 h-5 animate-spin" />Verifying...</>) : 'Link Phone Number'}
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {securityView === 'enroll-mfa' && (
-                    <>
-                      {!codeSent ? (
-                        <div className="space-y-4">
-                          <p className="text-sm text-slate-600">
-                            Enter the phone number where you&apos;d like to receive verification codes when signing in.
-                          </p>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Phone Number for 2FA</label>
-                            <div className="phone-input-light">
-                              <PhoneInput
-                                international
-                                defaultCountry="CA"
-                                value={phoneNumber}
-                                onChange={setPhoneNumber}
-                                placeholder="Enter phone number"
-                                className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                              />
-                            </div>
-                          </div>
-                          <button
-                            onClick={handleSendMfaCode}
-                            disabled={securityLoading || !phoneNumber}
-                            className="w-full py-3 bg-purple-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-purple-700 transition-colors disabled:opacity-50"
-                          >
-                            {securityLoading ? (<><Loader2 className="w-5 h-5 animate-spin" />Sending code...</>) : 'Send Verification Code'}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="bg-purple-50 border border-purple-200 text-purple-700 px-4 py-3 rounded-lg text-sm text-center">
-                            Code sent to {phoneNumber}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Verification Code</label>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              maxLength={6}
-                              value={verificationCode}
-                              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                              placeholder="Enter 6-digit code"
-                              className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-2xl tracking-[0.3em] font-mono"
-                              autoFocus
-                            />
-                          </div>
-                          <button
-                            onClick={handleConfirmMfaEnroll}
-                            disabled={securityLoading || verificationCode.length < 6}
-                            className="w-full py-3 bg-purple-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-purple-700 transition-colors disabled:opacity-50"
-                          >
-                            {securityLoading ? (<><Loader2 className="w-5 h-5 animate-spin" />Enabling 2FA...</>) : 'Enable Two-Factor Authentication'}
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {securityView === 'unenroll-mfa' && (
-                    <div className="space-y-4">
-                      <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm">
-                        <p className="font-medium mb-1">Are you sure?</p>
-                        <p>Disabling two-factor authentication will make your account less secure. You can re-enable it anytime.</p>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => { setSecurityView('main'); setSecurityError(null); }}
-                          className="flex-1 py-3 border border-slate-200 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition-colors"
-                        >
-                          Keep Enabled
-                        </button>
-                        <button
-                          onClick={handleUnenrollMfa}
-                          disabled={securityLoading}
-                          className="flex-1 py-3 bg-red-600 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-700 transition-colors disabled:opacity-50"
-                        >
-                          {securityLoading ? (<><Loader2 className="w-5 h-5 animate-spin" />Disabling...</>) : 'Disable 2FA'}
-                        </button>
                       </div>
                     </div>
-                  )}
-                </div>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${user.emailVerified ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {user.emailVerified ? 'Verified' : 'Unverified'}
+                    </span>
+                  </div>
 
-                <div id="recaptcha-settings" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-slate-400" />
+                      <div>
+                        <p className="font-medium text-slate-800">Two-Factor Authentication</p>
+                        <p className="text-sm text-slate-500">Email-based 2FA</p>
+                      </div>
+                    </div>
+                    <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded-full font-medium">Coming Soon</span>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                    <h3 className="font-medium text-slate-800">Account Security</h3>
+                    <ul className="text-sm text-slate-600 space-y-2">
+                      <li className="flex items-start gap-2"><span className="text-teal-500 mt-0.5">&#10003;</span>Your password is securely hashed</li>
+                      <li className="flex items-start gap-2"><span className="text-teal-500 mt-0.5">&#10003;</span>Sessions expire automatically for safety</li>
+                      <li className="flex items-start gap-2"><span className="text-teal-500 mt-0.5">&#10003;</span>All connections use HTTPS encryption</li>
+                    </ul>
+                  </div>
+
+                  <Link
+                    href="/forgot-password"
+                    onClick={() => setActiveModal(null)}
+                    className="block w-full text-center py-3 border border-slate-200 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+                  >
+                    Change Password
+                  </Link>
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
+
     </div>
   );
 }

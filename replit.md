@@ -11,18 +11,19 @@ BillPort is a Canadian bill management web app. Users can add bills, track them 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (February 21, 2026)
-- ✅ Multi-Factor Authentication (MFA/2FA): SMS-based two-factor authentication via Firebase
-- ✅ Phone sign-in: separate tab on login/signup pages for phone number + OTP authentication
-- ✅ MFA challenge screen: dedicated purple-themed UI for entering 2FA code during login
-- ✅ MFA enrollment: Settings → Security → Enable 2FA with phone number verification
-- ✅ MFA unenrollment: Settings → Security → Disable 2FA with confirmation dialog
-- ✅ Phone account linking: Settings → Security → Add/Remove Phone Number
-- ✅ RecaptchaVerifier: invisible reCAPTCHA for phone auth (separate from App Check reCAPTCHA v3)
-- ✅ 11 Firebase helpers in firebase.ts: phone sign-in, account linking, MFA enrollment/unenrollment/sign-in
-- ✅ AuthContext: MFA state management, phone auth methods, MFA verification flows
-- ✅ Security settings modal: shows linked providers, phone number, 2FA status, sign-in methods
-- ✅ Phone input: react-phone-number-input with CA default, dark+light theme CSS
-- ✅ Error handling: auth error messages for phone/MFA errors, requires-recent-login guidance
+- ✅ Removed phone authentication: no more Phone tabs on login/signup, no SMS costs
+- ✅ Removed phone MFA: SMS-based 2FA removed; email-based MFA planned (marked "Coming Soon")
+- ✅ Removed all phone helpers from firebase.ts: sendPhoneCode, confirmPhoneCode, linkPhone, MFA enrollment/unenrollment, RecaptchaVerifier
+- ✅ Cleaned AuthContext: removed MFA state management, phone methods; MFA error shows support contact message
+- ✅ Profile section in Settings: username field, email change, profile photo upload/remove, delete account
+- ✅ UserProfile model (Firestore userProfiles collection): userId, username, email, photoURL, updatedAt
+- ✅ Profile CRUD: getUserProfile, saveUserProfile, updateUserDisplayName, updateUserProfilePhoto, updateUserEmail, deleteUserAccount
+- ✅ Delete account: deletes all user bills, notifications, preferences, profile from Firestore + Firebase Auth
+- ✅ Notification preferences: replaced toggle with checkboxes (7 days, 2 days, 1 day, same day before due)
+- ✅ UserPreferences.notifyDays: number[] replaces hardcoded notification intervals
+- ✅ checkAndCreateDueDateNotifications uses notifyDays array; overdue bills always notified
+- ✅ Settings Security section simplified: email verification status, change password link, 2FA "Coming Soon"
+- ✅ Auth: Email/password + Google Sign-In only (no phone, no MFA)
 
 ## Previous Changes (February 19, 2026)
 - ✅ Smart Add Bill: 4 input methods (Search Company, Camera Scan, Upload Photo, Upload PDF)
@@ -107,7 +108,7 @@ Preferred communication style: Simple, everyday language.
 - ✅ In-app notification system with Firestore backend
 - ✅ Notifications page with mark-as-read, mark-all-read, type-specific badges
 - ✅ Bell icon with unread badge on dashboard
-- ✅ Auth: Email/password + Google Sign-In + Phone Sign-In + MFA/2FA
+- ✅ Auth: Email/password + Google Sign-In
 - ✅ Forgot Password flow
 - ✅ Firestore rules: per-user data isolation
 
@@ -181,6 +182,7 @@ Preferred communication style: Simple, everyday language.
 - **Sort Order**: Overdue → Upcoming → Paid (at bottom)
 - **In-App Notifications**: Bell icon with unread count, type-specific badges
 - **Auth**: Email/password + Google Sign-In + Forgot Password
+- **Profile Management**: Username, email change, profile photo upload, delete account
 
 ### Features NOT Included (Strict)
 - ❌ No in-app payment processing (redirects to biller website)
@@ -201,5 +203,5 @@ Preferred communication style: Simple, everyday language.
 
 ## Firebase Configuration
 - **Project ID**: mybillport-8e05a
-- **Auth Methods**: Email/password, Google OAuth, Phone Sign-In, SMS MFA/2FA
+- **Auth Methods**: Email/password, Google OAuth
 - **Environment Variables**: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID
