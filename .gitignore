@@ -6,3 +6,10 @@ vite.config.ts.*
 *.tar.gz
 attached_assets/
 .next/
+
+# Environment files with secrets
+.env
+.env.local
+.env.production
+.env.development
+.env*.local

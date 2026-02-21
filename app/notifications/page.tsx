@@ -40,9 +40,7 @@ export default function NotificationsPage() {
     setLoading(true);
     setError(null);
     try {
-      console.log('Loading notifications for user:', user.uid);
       const notifs = await fetchNotifications(user.uid);
-      console.log('Fetched notifications:', notifs.length);
       setNotifications(notifs);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);

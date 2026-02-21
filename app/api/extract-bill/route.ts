@@ -7,6 +7,7 @@ import {
   checkFileHashDuplicate,
   validateAndSanitizeExtraction,
 } from '../../lib/extractionGuards';
+import { verifyFirebaseToken, isValidMimeType, sanitizeString } from '../../lib/authVerify';
 
 export const runtime = "nodejs";
 
@@ -42,19 +43,40 @@ Rules:
 
 export async function POST(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const authResult = await verifyFirebaseToken(authHeader);
+
+    if (!authResult.valid) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const verifiedUserId = authResult.uid!;
+
     const apiKeyRaw = process.env.ANTHROPIC_API_KEY;
     const apiKey = apiKeyRaw ? apiKeyRaw.replace(/[\s\r\n\t]/g, '').trim() : null;
-    console.log("KEY EXISTS:", !!apiKey);
 
     if (!apiKey) {
       return NextResponse.json({ success: false, error: 'AI service not configured' }, { status: 500 });
     }
 
     const body = await request.json();
-    const { fileData, fileType, mimeType, userId } = body;
+    const { fileData, fileType, mimeType } = body;
 
     if (!fileData || !fileType) {
       return NextResponse.json({ success: false, error: 'Missing file data' }, { status: 400 });
+    }
+
+    const sanitizedFileType = sanitizeString(fileType, 20);
+    const validFileTypes = ['image', 'pdf'];
+    if (!validFileTypes.includes(sanitizedFileType)) {
+      return NextResponse.json({ success: false, error: 'Unsupported file type' }, { status: 400 });
+    }
+
+    if (mimeType && !isValidMimeType(mimeType)) {
+      return NextResponse.json({ success: false, error: 'Unsupported MIME type' }, { status: 400 });
     }
 
     const MAX_BASE64_SIZE = 14 * 1024 * 1024;
@@ -62,26 +84,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'File is too large. Please use a file under 10MB.' }, { status: 413 });
     }
 
-    const validFileTypes = ['image', 'pdf'];
-    if (!validFileTypes.includes(fileType)) {
-      return NextResponse.json({ success: false, error: 'Unsupported file type' }, { status: 400 });
+    const base64Regex = /^[A-Za-z0-9+/=]+$/;
+    if (!base64Regex.test(fileData.substring(0, 100))) {
+      return NextResponse.json({ success: false, error: 'Invalid file data format' }, { status: 400 });
     }
 
-    const rateLimitKey = userId || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                      request.headers.get('x-real-ip') || 
+                      'unknown';
 
-    const rateCheck = checkRateLimit(rateLimitKey);
-    if (!rateCheck.allowed) {
-      const hoursLeft = Math.ceil(rateCheck.resetsIn / (1000 * 60 * 60));
+    const userRateCheck = checkRateLimit(verifiedUserId);
+    if (!userRateCheck.allowed) {
+      const hoursLeft = Math.ceil(userRateCheck.resetsIn / (1000 * 60 * 60));
       return NextResponse.json({
         success: false,
         error: `You've reached the daily scan limit (10 scans/day). Try again in ${hoursLeft} hour${hoursLeft > 1 ? 's' : ''}.`,
         rateLimited: true,
-        resetsIn: rateCheck.resetsIn,
+        resetsIn: userRateCheck.resetsIn,
+      }, { status: 429 });
+    }
+
+    const ipRateCheck = checkRateLimit(`ip_${ipAddress}`);
+    if (!ipRateCheck.allowed) {
+      return NextResponse.json({
+        success: false,
+        error: 'Too many requests from this location. Please try again later.',
+        rateLimited: true,
       }, { status: 429 });
     }
 
     const fileHash = getContentHash(fileData);
-    if (checkFileHashDuplicate(rateLimitKey, fileHash)) {
+    if (checkFileHashDuplicate(verifiedUserId, fileHash)) {
       return NextResponse.json({
         success: false,
         error: 'This file was already scanned recently. Use the previous result or try a different file.',
@@ -93,7 +126,7 @@ export async function POST(request: NextRequest) {
     const anthropic = new Anthropic({ apiKey });
     let extractedJson: any;
 
-    if (fileType === 'image') {
+    if (sanitizedFileType === 'image') {
       const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
       const mediaType = validTypes.includes(mimeType) ? mimeType : 'image/jpeg';
 
@@ -119,7 +152,7 @@ export async function POST(request: NextRequest) {
 
       const text = response.content[0].type === 'text' ? response.content[0].text : '';
       extractedJson = parseJsonResponse(text);
-    } else if (fileType === 'pdf') {
+    } else if (sanitizedFileType === 'pdf') {
       const response = await anthropic.messages.create({
         model: DEFAULT_MODEL,
         max_tokens: 8192,
@@ -147,7 +180,7 @@ export async function POST(request: NextRequest) {
     }
 
     const processingMs = Date.now() - startTime;
-    console.log(`[extract-bill] userId=${userId || 'anon'} fileType=${fileType} processingMs=${processingMs} success=${!!extractedJson}`);
+    console.log(`[extract-bill] uid=${verifiedUserId.substring(0, 8)}... fileType=${sanitizedFileType} ms=${processingMs}`);
 
     if (!extractedJson) {
       return NextResponse.json({ success: false, error: 'Failed to parse bill data. Please try again or enter manually.' }, { status: 422 });
@@ -156,11 +189,11 @@ export async function POST(request: NextRequest) {
     const providerMatch = fuzzyMatchProvider(extractedJson.vendor || '');
 
     const rawResult = {
-      vendor: extractedJson.vendor || '',
+      vendor: sanitizeString(extractedJson.vendor, 200),
       amount: extractedJson.amount ?? null,
       dueDate: extractedJson.dueDate || null,
-      billingPeriod: extractedJson.billingPeriod || null,
-      accountNumber: extractedJson.accountNumber || null,
+      billingPeriod: sanitizeString(extractedJson.billingPeriod, 100),
+      accountNumber: sanitizeString(extractedJson.accountNumber, 50),
       currency: extractedJson.currency || 'CAD',
       category: providerMatch?.category || extractedJson.category || null,
       subcategory: providerMatch?.types?.[0] || null,
@@ -193,7 +226,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Bill extraction error:', error?.status, error?.message, JSON.stringify(error?.error || ''));
+    console.error('[extract-bill] error:', error?.status, error?.message?.substring(0, 200));
     const errorMsg = error?.message || '';
     if (errorMsg.includes('Could not process image') || errorMsg.includes('Could not process') || error?.status === 400) {
       return NextResponse.json(
