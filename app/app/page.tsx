@@ -458,7 +458,7 @@ export default function Dashboard() {
             <span className="text-xs text-slate-500">
               {filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''}
               {hasMore ? ` (showing ${visibleCount})` : ''}
-              {categoryFilter !== 'all' ? ` in ${getCategoryByValue(categoryFilter)?.label || categoryFilter}` : ` (${bills.length}/${FREE_PLAN_LIMIT} used)`}
+              {categoryFilter !== 'all' ? ` in ${getCategoryByValue(categoryFilter)?.label || categoryFilter}` : ` (${bills.length}/${FREE_PLAN_LIMIT} used — Free Plan)`}
             </span>
           )}
         </div>

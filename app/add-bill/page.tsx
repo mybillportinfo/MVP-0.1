@@ -383,7 +383,7 @@ export default function AddBillPage() {
             isAtLimit ? 'bg-red-500/10 border border-red-500/30 text-red-400' : 'bg-slate-800/50 border border-slate-700 text-slate-400'
           }`}>
             {isAtLimit && <AlertTriangle className="w-4 h-4 flex-shrink-0" />}
-            <span>{isAtLimit ? `Free plan allows up to ${FREE_PLAN_LIMIT} bills. Upgrade to add more.` : `${billCount} of ${FREE_PLAN_LIMIT} bills used (Free Plan)`}</span>
+            <span>{isAtLimit ? `Free plan allows up to ${FREE_PLAN_LIMIT} bills. Upgrade to add more.` : `${billCount} of ${FREE_PLAN_LIMIT} bills used — Free Plan`}</span>
           </div>
         )}
 
