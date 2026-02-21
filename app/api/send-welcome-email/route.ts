@@ -89,12 +89,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    const statusCode = error?.statusCode || error?.status;
-    if (statusCode === 401 || statusCode === 403) {
-      console.warn(`⚠️ MailerSend auth failed (${statusCode}) - skipping welcome email for ${email}`);
+    const statusCode = error?.statusCode || error?.status || error?.body?.statusCode;
+    const errorMsg = error?.body?.message || error?.message || String(error);
+    const isAuthError = statusCode === 401 || statusCode === 403 || errorMsg === 'Unauthenticated.' || errorMsg?.includes?.('Unauthenticated');
+    if (isAuthError) {
+      console.warn(`⚠️ MailerSend auth failed - skipping welcome email`);
       return NextResponse.json({ success: false, skipped: true, reason: 'email_service_auth_failed' });
     }
-    console.error('Welcome email failed:', error?.message || error);
+    console.error('Welcome email failed:', errorMsg);
     return NextResponse.json({ success: false, error: 'Email delivery failed' });
   }
 }
