@@ -35,6 +35,8 @@ import {
   signInWithPopup,
   sendPasswordResetEmail,
 } from "firebase/auth";
+import { initializeAppCheck, ReCaptchaV3Provider, AppCheck, getToken } from "firebase/app-check";
+import { getAnalytics, logEvent, Analytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
 
 function getFirebaseConfig() {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -63,6 +65,8 @@ function getFirebaseConfig() {
 let _app: FirebaseApp | null = null;
 let _db: Firestore | null = null;
 let _auth: Auth | null = null;
+let _appCheck: AppCheck | null = null;
+let _analytics: Analytics | null = null;
 
 function getFirebaseApp(): FirebaseApp | null {
   if (typeof window === 'undefined') return null;
@@ -79,7 +83,56 @@ function getFirebaseApp(): FirebaseApp | null {
   }
 
   _app = initializeApp(config);
+
+  initAppCheck(_app);
+  initAnalytics(_app);
+
   return _app;
+}
+
+function initAppCheck(app: FirebaseApp) {
+  if (_appCheck) return;
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  if (!siteKey) return;
+
+  try {
+    if (process.env.NODE_ENV === 'development') {
+      (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    }
+    _appCheck = initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(siteKey),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch (e) {
+    // App Check init can fail silently in some environments
+  }
+}
+
+function initAnalytics(app: FirebaseApp) {
+  if (_analytics) return;
+  try {
+    isAnalyticsSupported().then((supported) => {
+      if (supported && app) {
+        _analytics = getAnalytics(app);
+      }
+    });
+  } catch (e) {
+    // Analytics not supported in this environment
+  }
+}
+
+export function getFirebaseAnalytics(): Analytics | null {
+  return _analytics;
+}
+
+export async function getAppCheckToken(): Promise<string | null> {
+  if (!_appCheck) return null;
+  try {
+    const result = await getToken(_appCheck, false);
+    return result.token;
+  } catch {
+    return null;
+  }
 }
 
 function getFirebaseDb(): Firestore | null {

@@ -7,6 +7,7 @@ import { Home, Plus, Settings, Loader2, Trash2, AlertTriangle, Bell, DollarSign,
 import { useAuth } from '../contexts/AuthContext';
 import { fetchBills, deleteBill, fetchNotifications, checkAndCreateDueDateNotifications, sortBills, Bill, markBillAsPaid, getPaymentHistory, BillPaymentRecord, PaymentMethod, updateBill, BillingCycle, applyRecurringDetection, persistRecurringFlags, detectRecurringPatterns, dismissAmountAlert, RecurringFrequency } from '../lib/firebase';
 import { CATEGORIES, getCategoryByValue, getSubcategory } from '../lib/categories';
+import { trackBillPaid, trackBillDeleted, trackBillEdited, trackPaymentRedirect } from '../lib/analyticsService';
 
 const FREE_PLAN_LIMIT = 3;
 const BILLS_PER_PAGE = 10;
@@ -94,6 +95,7 @@ export default function Dashboard() {
       await deleteBill(billId);
       setBills(bills.filter(b => b.id !== billId));
       setConfirmDeleteId(null);
+      trackBillDeleted();
     } catch (err) {
       console.error('Failed to delete bill:', err);
       setError('Failed to delete bill. Please try again.');
@@ -155,6 +157,7 @@ export default function Dashboard() {
       )));
       setEditModal(null);
       setSuccessMessage(`${companyName} updated!`);
+      trackBillEdited();
     } catch (err: any) {
       console.error('Failed to update bill:', err);
       setError(err.message || 'Failed to update bill. Please try again.');
@@ -188,6 +191,8 @@ export default function Dashboard() {
       )));
       setMarkPaidModal(null);
       setSuccessMessage(`${bill.companyName} marked as paid!`);
+      const isOnTime = new Date(bill.dueDate) >= new Date();
+      trackBillPaid(isOnTime, remaining, method);
     } catch (err) {
       console.error('Failed to mark as paid:', err);
       setError('Failed to mark bill as paid. Please try again.');
@@ -561,6 +566,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/payment?biller=${encodeURIComponent(bill.companyName)}&amount=${remaining.toFixed(2)}`}
+                        onClick={() => trackPaymentRedirect(bill.companyName, true)}
                         className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors"
                       >
                         <ExternalLink className="w-4 h-4" />

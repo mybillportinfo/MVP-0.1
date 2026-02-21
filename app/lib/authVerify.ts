@@ -1,5 +1,6 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getAppCheck } from 'firebase-admin/app-check';
 
 let adminApp: App | null = null;
 
@@ -70,6 +71,24 @@ export async function verifyFirebaseToken(authHeader: string | null): Promise<{
       return { valid: false, error: 'Invalid token' };
     }
     return { valid: false, error: 'Authentication failed' };
+  }
+}
+
+export async function verifyAppCheckToken(appCheckToken: string | null): Promise<{
+  valid: boolean;
+  error?: string;
+}> {
+  if (!appCheckToken) {
+    return { valid: false, error: 'Missing App Check token' };
+  }
+
+  try {
+    const app = getAdminApp();
+    const appCheck = getAppCheck(app);
+    await appCheck.verifyToken(appCheckToken);
+    return { valid: true };
+  } catch (error: any) {
+    return { valid: false, error: 'Invalid App Check token' };
   }
 }
 

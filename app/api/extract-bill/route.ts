@@ -7,7 +7,7 @@ import {
   checkFileHashDuplicate,
   validateAndSanitizeExtraction,
 } from '../../lib/extractionGuards';
-import { verifyFirebaseToken, isValidMimeType, sanitizeString } from '../../lib/authVerify';
+import { verifyFirebaseToken, verifyAppCheckToken, isValidMimeType, sanitizeString } from '../../lib/authVerify';
 
 export const runtime = "nodejs";
 
@@ -54,6 +54,19 @@ export async function POST(request: NextRequest) {
     }
 
     const verifiedUserId = authResult.uid!;
+
+    const appCheckHeader = request.headers.get('x-firebase-appcheck');
+    const appCheckResult = await verifyAppCheckToken(appCheckHeader);
+    const appCheckEnforced = process.env.APPCHECK_ENFORCEMENT === 'true';
+    if (!appCheckResult.valid) {
+      if (appCheckEnforced) {
+        return NextResponse.json(
+          { success: false, error: 'App verification failed' },
+          { status: 401 }
+        );
+      }
+      console.log(`[extract-bill] app-check: not verified (enforcement=${appCheckEnforced})`);
+    }
 
     const apiKeyRaw = process.env.ANTHROPIC_API_KEY;
     const apiKey = apiKeyRaw ? apiKeyRaw.replace(/[\s\r\n\t]/g, '').trim() : null;

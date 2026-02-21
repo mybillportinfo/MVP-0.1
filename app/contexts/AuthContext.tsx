@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, subscribeToAuth, loginUser, registerUser, logoutUser, signInWithGoogle } from '../lib/firebase';
+import { trackUserLogin, trackUserSignup } from '../lib/analyticsService';
 
 interface AuthContextType {
   user: User | null;
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await loginUser(email, password);
+      trackUserLogin('email');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setError(getAuthErrorMessage(message));
@@ -48,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await registerUser(email, password);
+      trackUserSignup('email');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Signup failed';
       setError(getAuthErrorMessage(message));
@@ -62,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await signInWithGoogle();
+      trackUserLogin('google');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Google sign-in failed';
       setError(getAuthErrorMessage(message));

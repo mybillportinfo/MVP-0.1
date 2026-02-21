@@ -12,13 +12,16 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import {
   addBill, fetchBills, createBillAddedNotification,
-  checkForRecurringProvider, confirmRecurring, Bill, RecurringFrequency
+  checkForRecurringProvider, confirmRecurring, Bill, RecurringFrequency,
+  getAppCheckToken,
 } from '../lib/firebase';
 import { CATEGORIES, BILLING_CYCLES, getCategoryByValue, getSubcategory, type MetadataField } from '../lib/categories';
 import { resolveProvider } from '../lib/providerRegistry';
 import ProviderAutocomplete from '../components/ProviderAutocomplete';
 import type { BillExtractionResult } from '../lib/billExtraction';
 import { checkForDuplicate, type DuplicateCheckResult } from '../lib/extractionGuards';
+import { trackBillCreated, trackBillScanAttempt } from '../lib/analyticsService';
+import { trackBillCreation, trackFailedScan } from '../lib/securityMonitor';
 
 const FREE_PLAN_LIMIT = 3;
 type AddMethod = 'select' | 'search' | 'scan' | 'review';
@@ -130,12 +133,18 @@ export default function AddBillPage() {
         return;
       }
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      };
+      const appCheckToken = await getAppCheckToken();
+      if (appCheckToken) {
+        headers['X-Firebase-AppCheck'] = appCheckToken;
+      }
+
       const response = await fetch('/api/extract-bill', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
+        headers,
         body: JSON.stringify({
           fileData: base64,
           fileType: isPdf ? 'pdf' : 'image',
@@ -149,9 +158,13 @@ export default function AddBillPage() {
 
       if (!result.success) {
         setExtractionError(result.error || 'Failed to extract bill data.');
+        trackBillScanAttempt(false, isPdf ? 'pdf' : 'image', result.error || 'unknown');
+        trackFailedScan(result.error || 'unknown');
         setIsExtracting(false);
         return;
       }
+
+      trackBillScanAttempt(true, isPdf ? 'pdf' : 'image');
 
       if (result.validation?.warnings?.length > 0) {
         setValidationWarnings(result.validation.warnings);
@@ -171,6 +184,8 @@ export default function AddBillPage() {
       setMethod('review');
       toast.success('Bill data extracted successfully!');
     } catch (err: any) {
+      trackBillScanAttempt(false, file.type === 'application/pdf' ? 'pdf' : 'image', err?.name || 'exception');
+      trackFailedScan(err?.name || 'exception');
       if (err?.name === 'AbortError') {
         setExtractionError('Request timed out. Please try again with a smaller file.');
       } else {
@@ -282,6 +297,9 @@ export default function AddBillPage() {
       }
 
       setSuccess(true);
+      const creationMethod = extractedData ? 'scan' : 'manual';
+      trackBillCreated(creationMethod, category);
+      trackBillCreation();
       toast.success('Bill added successfully!');
       setTimeout(() => router.push('/app'), 1000);
     } catch (err) {
