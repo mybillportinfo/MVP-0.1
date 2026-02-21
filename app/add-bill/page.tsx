@@ -122,14 +122,24 @@ export default function AddBillPage() {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 60000);
 
+      const idToken = await user?.getIdToken();
+      if (!idToken) {
+        setExtractionError('Please sign in to scan bills.');
+        setIsExtracting(false);
+        clearTimeout(timeout);
+        return;
+      }
+
       const response = await fetch('/api/extract-bill', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
         body: JSON.stringify({
           fileData: base64,
           fileType: isPdf ? 'pdf' : 'image',
           mimeType: file.type,
-          userId: user?.uid || '',
         }),
         signal: controller.signal,
       });
