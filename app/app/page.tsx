@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import { Home, Plus, Settings, Loader2, Trash2, AlertTriangle, Bell, DollarSign, CheckCircle, ExternalLink, Check, X, Clock, ChevronDown, ChevronUp, Pencil, Receipt } from "lucide-react";
+import { Home, Plus, Settings, Loader2, Trash2, AlertTriangle, Bell, DollarSign, CheckCircle, ExternalLink, Check, X, Clock, ChevronDown, ChevronUp, Pencil, Receipt, TrendingUp, TrendingDown, Minus, Sparkles, BarChart3, Target, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
 import { fetchBills, deleteBill, fetchNotifications, checkAndCreateDueDateNotifications, sortBills, Bill, markBillAsPaid, getPaymentHistory, BillPaymentRecord, PaymentMethod, updateBill, BillingCycle, applyRecurringDetection, persistRecurringFlags, detectRecurringPatterns, dismissAmountAlert, RecurringFrequency } from '../lib/firebase';
 import { CATEGORIES, getCategoryByValue, getSubcategory } from '../lib/categories';
 import { trackBillPaid, trackBillDeleted, trackBillEdited, trackPaymentRedirect } from '../lib/analyticsService';
+import { detectSpike, calculateAnnualProjections, calculateSavingsScore, SpikeInfo, AnnualProjection, SavingsScore } from '../lib/billAnalytics';
 
 const FREE_PLAN_LIMIT = 5;
 const BILLS_PER_PAGE = 10;
@@ -40,6 +41,10 @@ export default function Dashboard() {
   } | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(BILLS_PER_PAGE);
+  const [annualProjection, setAnnualProjection] = useState<{ perBiller: AnnualProjection[]; totalAnnual: number } | null>(null);
+  const [savingsScore, setSavingsScore] = useState<SavingsScore | null>(null);
+  const [showProjectionDetail, setShowProjectionDetail] = useState(false);
+  const [insightsModal, setInsightsModal] = useState<{ bill: Bill; loading: boolean; data: any | null; error: string | null } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -81,6 +86,11 @@ export default function Dashboard() {
 
       const notifs = await fetchNotifications(user.uid).catch(() => []);
       setUnreadNotifCount(notifs.filter(n => !n.isRead).length);
+
+      const projections = calculateAnnualProjections(withRecurring);
+      setAnnualProjection(projections);
+      const scoreResult = calculateSavingsScore(withRecurring);
+      setSavingsScore(scoreResult);
     } catch (err) {
       console.error('Failed to fetch bills:', err);
       setError('Failed to load bills. Please try again.');
@@ -89,11 +99,41 @@ export default function Dashboard() {
     }
   };
 
+  const fetchInsights = async (bill: Bill) => {
+    setInsightsModal({ bill, loading: true, data: null, error: null });
+    try {
+      const billsData = bills.map(b => ({
+        companyName: b.companyName,
+        totalAmount: b.totalAmount,
+        dueDate: new Date(b.dueDate).toISOString(),
+        status: b.status,
+        category: b.category,
+        isRecurring: b.isRecurring,
+        recurringFrequency: b.recurringFrequency,
+        avgRecurringAmount: b.avgRecurringAmount,
+        amountDeviationPercent: b.amountDeviationPercent,
+      }));
+      const res = await fetch('/api/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bills: billsData, billerName: bill.companyName }),
+      });
+      if (!res.ok) throw new Error('Failed to fetch insights');
+      const data = await res.json();
+      setInsightsModal(prev => prev ? { ...prev, loading: false, data } : null);
+    } catch (err: any) {
+      setInsightsModal(prev => prev ? { ...prev, loading: false, error: err.message || 'Failed to load insights' } : null);
+    }
+  };
+
   const handleDeleteBill = async (billId: string) => {
     setDeletingId(billId);
     try {
       await deleteBill(billId);
-      setBills(bills.filter(b => b.id !== billId));
+      const updated = bills.filter(b => b.id !== billId);
+      setBills(updated);
+      setAnnualProjection(calculateAnnualProjections(updated));
+      setSavingsScore(calculateSavingsScore(updated));
       setConfirmDeleteId(null);
       trackBillDeleted();
     } catch (err) {
@@ -145,7 +185,7 @@ export default function Dashboard() {
         dueDate: new Date(dueDate),
         notes: notes.trim() || undefined,
       });
-      setBills(prev => sortBills(prev.map(b =>
+      const updatedBills = sortBills(bills.map(b =>
         b.id === bill.id ? {
           ...b,
           companyName: companyName.trim(),
@@ -154,7 +194,10 @@ export default function Dashboard() {
           dueDate: new Date(dueDate),
           status: amount <= (b.paidAmount || 0) && amount > 0 ? 'paid' : (b.paidAmount || 0) > 0 ? 'partial' : 'unpaid',
         } : b
-      )));
+      ));
+      setBills(updatedBills);
+      setAnnualProjection(calculateAnnualProjections(updatedBills));
+      setSavingsScore(calculateSavingsScore(updatedBills));
       setEditModal(null);
       setSuccessMessage(`${companyName} updated!`);
       trackBillEdited();
@@ -186,9 +229,12 @@ export default function Dashboard() {
         confirmationCode || undefined,
         notes || undefined
       );
-      setBills(prev => sortBills(prev.map(b =>
+      const updatedPaid = sortBills(bills.map(b =>
         b.id === bill.id ? { ...b, status: result.newStatus, paidAmount: result.newPaidAmount } : b
-      )));
+      ));
+      setBills(updatedPaid);
+      setAnnualProjection(calculateAnnualProjections(updatedPaid));
+      setSavingsScore(calculateSavingsScore(updatedPaid));
       setMarkPaidModal(null);
       setSuccessMessage(`${bill.companyName} marked as paid!`);
       const isOnTime = new Date(bill.dueDate) >= new Date();
@@ -291,15 +337,16 @@ export default function Dashboard() {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (insightsModal) setInsightsModal(null);
         if (editModal) setEditModal(null);
         if (markPaidModal) setMarkPaidModal(null);
       }
     };
-    if (editModal || markPaidModal) {
+    if (editModal || markPaidModal || insightsModal) {
       document.addEventListener('keydown', handleEscape);
       return () => document.removeEventListener('keydown', handleEscape);
     }
-  }, [editModal, markPaidModal]);
+  }, [editModal, markPaidModal, insightsModal]);
 
   useEffect(() => {
     setVisibleCount(BILLS_PER_PAGE);
@@ -396,6 +443,86 @@ export default function Dashboard() {
           </div>
         );
       })()}
+
+      {!loading && bills.length > 0 && annualProjection && savingsScore && (
+        <div className="px-4 grid grid-cols-2 gap-3 mb-4">
+          <button
+            onClick={() => setShowProjectionDetail(!showProjectionDetail)}
+            className="summary-card text-left hover:border-teal-500/40 transition-all"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <BarChart3 className="w-4 h-4 text-teal-400" />
+              <span className="text-xs text-slate-400">Annual Projection</span>
+            </div>
+            <p className="text-xl font-bold text-teal-400">${annualProjection.totalAnnual.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-[10px] text-slate-500">{annualProjection.perBiller.length} biller{annualProjection.perBiller.length !== 1 ? 's' : ''} tracked</p>
+          </button>
+
+          <div className="summary-card text-left">
+            <div className="flex items-center gap-2 mb-1">
+              <Target className="w-4 h-4 text-teal-400" />
+              <span className="text-xs text-slate-400">Savings Score</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <p className={`text-xl font-bold ${savingsScore.color}`}>{savingsScore.score}</p>
+              <span className="text-[10px] text-slate-500">/100</span>
+            </div>
+            <p className={`text-[10px] font-medium ${savingsScore.color}`}>{savingsScore.label}</p>
+          </div>
+        </div>
+      )}
+
+      {showProjectionDetail && annualProjection && (
+        <div className="px-4 mb-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+              <div>
+                <h3 className="text-white font-semibold text-sm">Annual Cost Breakdown</h3>
+                <p className="text-xs text-slate-400">Estimated yearly spending per biller</p>
+              </div>
+              <button onClick={() => setShowProjectionDetail(false)} className="p-1 hover:bg-slate-700 rounded-lg">
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+            <div className="divide-y divide-slate-700/50 max-h-64 overflow-y-auto">
+              {annualProjection.perBiller.map((p, i) => (
+                <div key={i} className="px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="text-sm text-white truncate">{p.billerName}</span>
+                    {p.trend === 'rising' && <ArrowUpRight className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />}
+                    {p.trend === 'falling' && <ArrowDownRight className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />}
+                    {p.trend === 'stable' && <Minus className="w-3 h-3 text-slate-500 flex-shrink-0" />}
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-2">
+                    <p className="text-sm font-medium text-teal-400">${p.annualEstimate.toLocaleString('en-CA', { minimumFractionDigits: 2 })}</p>
+                    <p className="text-[10px] text-slate-500">${p.monthlyAvg.toFixed(2)}/bill</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-4 py-3 bg-slate-700/30 flex items-center justify-between">
+              <span className="text-sm font-semibold text-white">Total Annual Estimate</span>
+              <span className="text-sm font-bold text-teal-400">${annualProjection.totalAnnual.toLocaleString('en-CA', { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && savingsScore && savingsScore.factors.length > 0 && (
+        <div className="px-4 mb-4">
+          <div className="flex flex-wrap gap-1.5">
+            {savingsScore.factors.slice(0, 3).map((f, i) => (
+              <span key={i} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium ${
+                f.impact === 'positive' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                f.impact === 'negative' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                'bg-slate-700 text-slate-400 border border-slate-600'
+              }`}>
+                {f.impact === 'positive' ? '✓' : f.impact === 'negative' ? '!' : '•'} {f.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isAtLimit && (
         <div className="px-4 mb-4">
@@ -503,6 +630,18 @@ export default function Dashboard() {
                           🔄 {bill.recurringFrequency === 'monthly' ? 'Monthly' : bill.recurringFrequency === 'quarterly' ? 'Quarterly' : bill.recurringFrequency === 'yearly' ? 'Yearly' : 'Recurring'}
                         </span>
                       )}
+                      {(() => {
+                        const spike = detectSpike(bill, bills);
+                        if (!spike.type) return null;
+                        return (
+                          <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                            spike.type === 'increase' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                          }`} title={`${spike.percent}% ${spike.type} vs ${spike.comparedTo}`}>
+                            {spike.type === 'increase' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                            {spike.percent}% {spike.type === 'increase' ? 'up' : 'down'}
+                          </span>
+                        );
+                      })()}
                     </div>
                     {billCategory && (
                       <p className="text-xs text-slate-500 mt-0.5">
@@ -590,6 +729,14 @@ export default function Dashboard() {
                       </button>
 
                       <button
+                        onClick={() => fetchInsights(bill)}
+                        className="p-2 transition-colors rounded-lg flex-shrink-0 text-slate-400 hover:text-purple-600 hover:bg-purple-50"
+                        title="AI Insights"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                      </button>
+
+                      <button
                         onClick={() => bill.id && togglePaymentHistory(bill.id)}
                         className={`p-2 transition-colors rounded-lg flex-shrink-0 ${showingHistory ? 'text-teal-600 bg-teal-50' : 'text-slate-400 hover:text-teal-600'}`}
                         title="Payment History"
@@ -661,6 +808,13 @@ export default function Dashboard() {
                           title="Edit Bill"
                         >
                           <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => fetchInsights(bill)}
+                          className="p-2 transition-colors rounded-lg flex-shrink-0 text-slate-400 hover:text-purple-600 hover:bg-purple-50"
+                          title="AI Insights"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => bill.id && togglePaymentHistory(bill.id)}
@@ -952,6 +1106,103 @@ export default function Dashboard() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Insights Modal */}
+      {insightsModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800">AI Insights</h3>
+                  <p className="text-sm text-slate-500">{insightsModal.bill.companyName}</p>
+                </div>
+              </div>
+              <button onClick={() => setInsightsModal(null)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-5">
+              {insightsModal.loading && (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+                  <p className="text-sm text-slate-500">Analyzing your bills...</p>
+                </div>
+              )}
+
+              {insightsModal.error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  {insightsModal.error}
+                </div>
+              )}
+
+              {insightsModal.data && (
+                <div className="space-y-4">
+                  {insightsModal.data.source === 'ai' && (
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700">
+                      <Sparkles className="w-3 h-3" /> AI-Powered
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-sm text-slate-700 leading-relaxed">{insightsModal.data.summary}</p>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-lg p-4">
+                    <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Trend</h4>
+                    <div className="flex items-center gap-2">
+                      {insightsModal.data.percentChange !== null && insightsModal.data.percentChange !== undefined && (
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                          insightsModal.data.percentChange > 5 ? 'bg-red-100 text-red-700' :
+                          insightsModal.data.percentChange < -5 ? 'bg-green-100 text-green-700' :
+                          'bg-slate-200 text-slate-600'
+                        }`}>
+                          {insightsModal.data.percentChange > 0 ? <TrendingUp className="w-3 h-3" /> : insightsModal.data.percentChange < 0 ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                          {insightsModal.data.percentChange > 0 ? '+' : ''}{insightsModal.data.percentChange}%
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-600 mt-2">{insightsModal.data.trend}</p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-slate-50 rounded-lg p-3 text-center">
+                      <p className="text-xs text-slate-500 mb-1">Average</p>
+                      <p className="text-sm font-semibold text-slate-800">${insightsModal.data.avgAmount?.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3 text-center">
+                      <p className="text-xs text-slate-500 mb-1">Lowest</p>
+                      <p className="text-sm font-semibold text-green-600">${insightsModal.data.minAmount?.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3 text-center">
+                      <p className="text-xs text-slate-500 mb-1">Highest</p>
+                      <p className="text-sm font-semibold text-red-600">${insightsModal.data.maxAmount?.toFixed(2)}</p>
+                    </div>
+                  </div>
+
+                  {insightsModal.data.tips && insightsModal.data.tips.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Tips</h4>
+                      <div className="space-y-2">
+                        {insightsModal.data.tips.map((tip: string, i: number) => (
+                          <div key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                            <span className="text-teal-500 mt-0.5 flex-shrink-0">•</span>
+                            <span>{tip}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
