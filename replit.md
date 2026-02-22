@@ -11,6 +11,11 @@ Key capabilities include:
 - User authentication via Firebase (email/password and Google OAuth).
 - In-app notification system.
 
+## GitHub Repository
+- **Push URL**: https://github.com/mybillportinfo/mybillportMvp-0.1.git
+- Always push to this repo when the user asks to push to GitHub.
+- Do NOT push to MVP-0.1.git (wrong repo).
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
