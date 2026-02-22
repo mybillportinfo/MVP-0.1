@@ -90,12 +90,14 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     const statusCode = error?.statusCode || error?.status || error?.body?.statusCode;
     const errorMsg = error?.body?.message || error?.message || String(error);
+    console.error(`MailerSend error [status=${statusCode}]: ${errorMsg}`);
+    if (error?.body) {
+      console.error('MailerSend body:', JSON.stringify(error.body));
+    }
     const isAuthError = statusCode === 401 || statusCode === 403 || errorMsg === 'Unauthenticated.' || errorMsg?.includes?.('Unauthenticated');
     if (isAuthError) {
-      console.warn(`⚠️ MailerSend auth failed - check MAILERSEND_API_KEY`);
       return NextResponse.json({ success: false, skipped: true, reason: 'email_service_auth_failed' });
     }
-    console.error('Welcome email failed:', errorMsg);
-    return NextResponse.json({ success: false, error: 'Email delivery failed' });
+    return NextResponse.json({ success: false, error: errorMsg });
   }
 }
