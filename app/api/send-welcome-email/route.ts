@@ -57,12 +57,31 @@ function buildWelcomeEmail(name: string) {
   return { html, text };
 }
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const recentSends = new Map<string, number>();
+
 export async function POST(request: NextRequest) {
   try {
+    const internalSecret = process.env.WELCOME_EMAIL_SECRET;
+    const authHeader = request.headers.get('x-welcome-secret');
+    if (internalSecret && authHeader !== internalSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { email, displayName } = await request.json();
 
-    if (!email) {
+    if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const now = Date.now();
+    const lastSent = recentSends.get(normalizedEmail) || 0;
+    if (now - lastSent < 60_000) {
+      return NextResponse.json({ success: true, skipped: true, reason: 'rate_limited' });
     }
 
     const gmailUser = process.env.GMAIL_USER;
@@ -73,7 +92,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, skipped: true });
     }
 
-    const name = displayName || 'there';
+    const rawName = (typeof displayName === 'string' ? displayName : '').trim().slice(0, 100) || 'there';
+    const name = escapeHtml(rawName);
     const { html, text } = buildWelcomeEmail(name);
 
     const transporter = nodemailer.createTransport({
@@ -92,7 +112,8 @@ export async function POST(request: NextRequest) {
       text,
     });
 
-    console.log(`✅ Welcome email sent to ${email}`);
+    recentSends.set(normalizedEmail, Date.now());
+    console.log(`✅ Welcome email sent to ${normalizedEmail}`);
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
