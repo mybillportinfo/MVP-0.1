@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodeForTokens, storeGmailTokens, getOAuth2Client } from '../../../lib/gmailService';
+import { exchangeCodeForTokens, storeGmailTokens, getOAuth2Client, getGmailTokens, verifyOAuthState } from '../../../lib/gmailService';
 import { google } from 'googleapis';
 
 export const runtime = 'nodejs';
@@ -23,13 +23,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${appUrl}/settings?gmail=error&reason=${encodeURIComponent(error)}`);
     }
 
-    if (!code) {
+    if (!code || !stateParam) {
       return NextResponse.redirect(`${appUrl}/settings?gmail=error&reason=no_code`);
     }
 
-    const userId = stateParam;
+    const userId = verifyOAuthState(stateParam);
     if (!userId) {
-      return NextResponse.redirect(`${appUrl}/settings?gmail=error&reason=no_user`);
+      return NextResponse.redirect(`${appUrl}/settings?gmail=error&reason=invalid_state`);
     }
 
     const tokens = await exchangeCodeForTokens(code);
@@ -40,9 +40,19 @@ export async function GET(request: NextRequest) {
     const profile = await gmail.users.getProfile({ userId: 'me' });
     const gmailEmail = profile.data.emailAddress || '';
 
+    let refreshToken = tokens.refreshToken;
+    if (!refreshToken) {
+      const existing = await getGmailTokens(userId);
+      refreshToken = existing?.refreshToken || null;
+    }
+
+    if (!refreshToken) {
+      return NextResponse.redirect(`${appUrl}/settings?gmail=error&reason=no_refresh_token`);
+    }
+
     await storeGmailTokens(userId, {
       accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+      refreshToken,
       expiryDate: tokens.expiryDate,
       email: gmailEmail,
       connectedAt: Date.now(),

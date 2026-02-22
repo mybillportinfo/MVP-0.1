@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import crypto from 'crypto';
 
 let _db: Firestore | null = null;
 
@@ -50,13 +51,49 @@ export function getOAuth2Client() {
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
+function getStateSecret(): string {
+  const secret = process.env.GMAIL_CLIENT_SECRET;
+  if (!secret) {
+    throw new Error('GMAIL_CLIENT_SECRET is required for OAuth state signing');
+  }
+  return secret;
+}
+
+export function signOAuthState(userId: string): string {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const payload = `${userId}:${nonce}`;
+  const hmac = crypto.createHmac('sha256', getStateSecret()).update(payload).digest('hex');
+  return `${payload}:${hmac}`;
+}
+
+export function verifyOAuthState(state: string): string | null {
+  try {
+    const parts = state.split(':');
+    if (parts.length !== 3) return null;
+    const [userId, nonce, signature] = parts;
+    if (!userId || !nonce || !signature) return null;
+    if (!/^[a-f0-9]{64}$/i.test(signature)) return null;
+    if (!/^[a-f0-9]{32}$/i.test(nonce)) return null;
+    const payload = `${userId}:${nonce}`;
+    const expected = crypto.createHmac('sha256', getStateSecret()).update(payload).digest('hex');
+    const sigBuf = Buffer.from(signature, 'hex');
+    const expBuf = Buffer.from(expected, 'hex');
+    if (sigBuf.length !== expBuf.length) return null;
+    if (!crypto.timingSafeEqual(sigBuf, expBuf)) return null;
+    return userId;
+  } catch {
+    return null;
+  }
+}
+
 export function getAuthUrl(userId: string): string {
   const oauth2Client = getOAuth2Client();
+  const signedState = signOAuthState(userId);
   return oauth2Client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
     scope: ['https://www.googleapis.com/auth/gmail.readonly'],
-    state: userId,
+    state: signedState,
   });
 }
 
@@ -71,19 +108,19 @@ export interface GmailTokenData {
 
 export async function exchangeCodeForTokens(code: string): Promise<{
   accessToken: string;
-  refreshToken: string;
+  refreshToken: string | null;
   expiryDate: number;
 }> {
   const oauth2Client = getOAuth2Client();
   const { tokens } = await oauth2Client.getToken(code);
 
-  if (!tokens.access_token || !tokens.refresh_token) {
-    throw new Error('Failed to obtain tokens from Google');
+  if (!tokens.access_token) {
+    throw new Error('Failed to obtain access token from Google');
   }
 
   return {
     accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token,
+    refreshToken: tokens.refresh_token || null,
     expiryDate: tokens.expiry_date || Date.now() + 3600 * 1000,
   };
 }
@@ -118,12 +155,15 @@ export async function getAuthenticatedGmailClient(userId: string) {
 
   oauth2Client.on('tokens', async (newTokens) => {
     if (newTokens.access_token) {
-      await storeGmailTokens(userId, {
-        ...tokens,
+      const updated: Partial<GmailTokenData> = {
         accessToken: newTokens.access_token,
         expiryDate: newTokens.expiry_date || Date.now() + 3600 * 1000,
         updatedAt: Date.now(),
-      });
+      };
+      if (newTokens.refresh_token) {
+        updated.refreshToken = newTokens.refresh_token;
+      }
+      await storeGmailTokens(userId, { ...tokens, ...updated });
     }
   });
 
@@ -180,8 +220,16 @@ export async function checkDuplicateGmailMessage(userId: string, gmailMessageId:
   return !snapshot.empty;
 }
 
-export async function updatePendingBillStatus(billId: string, status: 'confirmed' | 'rejected'): Promise<void> {
+export async function updatePendingBillStatus(billId: string, status: 'confirmed' | 'rejected', userId: string): Promise<void> {
   const db = getAdminDb();
+  const doc = await db.collection('pendingBills').doc(billId).get();
+  if (!doc.exists) {
+    throw new Error('Pending bill not found');
+  }
+  const data = doc.data();
+  if (data?.userId !== userId) {
+    throw new Error('Unauthorized: bill does not belong to user');
+  }
   await db.collection('pendingBills').doc(billId).update({ status });
 }
 

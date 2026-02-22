@@ -38,7 +38,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const status = action === 'confirm' ? 'confirmed' : 'rejected';
-    await updatePendingBillStatus(billId, status as 'confirmed' | 'rejected');
+    await updatePendingBillStatus(billId, status as 'confirmed' | 'rejected', authResult.uid);
 
     return NextResponse.json({ success: true, status });
   } catch (error: any) {
