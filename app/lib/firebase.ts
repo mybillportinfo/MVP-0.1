@@ -274,21 +274,30 @@ export function subscribeToAuth(callback: (user: User | null) => void) {
 export async function signInWithGoogle() {
   const auth = getFirebaseAuth();
   if (!auth) return Promise.reject(new Error('Firebase not available'));
-  console.log('Google sign-in: authDomain =', auth.config.authDomain);
-  console.log('Google sign-in: apiKey present =', !!auth.config.apiKey);
   const provider = new GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
 
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    await signInWithRedirect(auth, provider);
+    return null as any;
+  }
+
   try {
-    const result = await signInWithPopup(auth, provider);
-    console.log('Google sign-in success');
-    return result;
+    return await signInWithPopup(auth, provider);
   } catch (popupError: any) {
-    console.error('Google sign-in error:', popupError?.code, popupError?.message, popupError?.customData, JSON.stringify(popupError));
+    console.error('Google sign-in popup error:', popupError?.code, popupError?.message);
     if (popupError?.code === 'auth/popup-blocked' ||
         popupError?.code === 'auth/popup-closed-by-user' ||
         popupError?.code === 'auth/cancelled-popup-request') {
+      await signInWithRedirect(auth, provider);
+      return null as any;
+    }
+    if (popupError?.code === 'auth/invalid-credential' ||
+        popupError?.code === 'auth/internal-error') {
+      console.log('Popup failed, falling back to redirect flow');
       await signInWithRedirect(auth, provider);
       return null as any;
     }
@@ -300,8 +309,10 @@ export async function handleGoogleRedirectResult() {
   const auth = getFirebaseAuth();
   if (!auth) return null;
   try {
-    return await getRedirectResult(auth);
-  } catch {
+    const result = await getRedirectResult(auth);
+    return result;
+  } catch (err: any) {
+    console.error('Google redirect result error:', err?.code, err?.message);
     return null;
   }
 }
