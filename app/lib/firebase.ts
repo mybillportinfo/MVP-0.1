@@ -308,13 +308,8 @@ export async function signInWithGoogle() {
 export async function handleGoogleRedirectResult() {
   const auth = getFirebaseAuth();
   if (!auth) return null;
-  try {
-    const result = await getRedirectResult(auth);
-    return result;
-  } catch (err: any) {
-    console.error('Google redirect result error:', err?.code, err?.message);
-    return null;
-  }
+  const result = await getRedirectResult(auth);
+  return result;
 }
 
 export function resetPassword(email: string) {
