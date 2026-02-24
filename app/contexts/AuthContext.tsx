@@ -133,7 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (message.includes('auth/unauthorized-domain')) {
         setError('This domain is not authorized for Google sign-in. Please contact support.');
       } else if (message.includes('auth/invalid-credential')) {
-        setError('Google sign-in failed. Please try again or use email sign-in.');
+        const errCode = (err as any)?.code || 'unknown';
+        const errCustomData = JSON.stringify((err as any)?.customData || {});
+        setError(`Google sign-in credential error (${errCode}). Config: ${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}. Details: ${errCustomData}. Please try again or use email sign-in.`);
       } else if (message.includes('auth/internal-error')) {
         setError('Google sign-in encountered a temporary issue. Please try again.');
       } else {
